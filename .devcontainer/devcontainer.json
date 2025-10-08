@@ -1,0 +1,27 @@
+{
+	"name": "Dev Container",
+	"image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "features": {
+        "ghcr.io/devcontainers/features/node:1": {}
+    },
+	"waitFor": "onCreateCommand",
+    "updateContentCommand": "pnpm install",
+    "postAttachCommand": "pnpm dev",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "esbenp.prettier-vscode",
+                "DavidAnson.vscode-markdownlint"
+            ]
+        }
+    },
+    "portsAttributes": {
+        "5137": {
+            "label": "Application",
+            "onAutoForward": "openPreview"
+        }
+    },
+    "forwardPorts": [5137],
+    "runArgs": ["--add-host=host.docker.internal:host-gateway"]
+    //"onCreateCommand": "sudo apt-get update && sudo apt-get install -y libgl1"
+}
