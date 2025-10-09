@@ -4,7 +4,7 @@
     "features": {
         "ghcr.io/devcontainers/features/node:1": {}
     },
-	"waitFor": "onCreateCommand",
+	// "waitFor": "onCreateCommand",
     "updateContentCommand": "pnpm install",
     "postAttachCommand": "pnpm dev",
     "customizations": {
@@ -16,12 +16,12 @@
         }
     },
     "portsAttributes": {
-        "5137": {
+        "5173": {
             "label": "Application",
             "onAutoForward": "openPreview"
         }
     },
-    "forwardPorts": [5137],
+    "forwardPorts": [5173],
     "runArgs": ["--add-host=host.docker.internal:host-gateway"]
     //"onCreateCommand": "sudo apt-get update && sudo apt-get install -y libgl1"
 }
