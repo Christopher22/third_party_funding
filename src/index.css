@@ -1,328 +1,120 @@
-/* Root container */
-.pgantt-root {
-  width: 100%;
-  overflow-x: auto;
-  padding: 2rem;
-  background: #fafbfc;
-  min-height: 100vh;
-  box-sizing: border-box;
-  font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 }
 
-.pgantt-title {
-  font-size: 1.4rem;
-  margin-bottom: 1.5rem;
-  color: #23395d;
-  font-weight: 700;
-  letter-spacing: 1px;
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
 }
 
-/* TABLE */
-.pgantt-table {
-  border-collapse: separate;
-  border-spacing: 0;
-  width: 100%;
-  background: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(60, 70, 140, 0.07);
-  overflow: hidden;
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
 }
 
-.pgantt-th,
-.pgantt-td {
-  border: 1px solid #e3e7ee;
-  padding: 10px 8px;
-  background: none;
-  transition: background 0.2s;
-}
-
-.pgantt-th {
-  background: #f4f7fb;
-  font-weight: 600;
-  color: #38577a;
-  font-size: 0.97rem;
-  text-align: center;
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  border-bottom: 2px solid #b6c6df;
-}
-
-.pgantt-th-month {
-  font-size: 0.93rem;
-  letter-spacing: 0.4px;
-}
-
-.pgantt-td {
-  background: #fff;
-}
-
-.pgantt-td-name {
-  font-weight: 700;
-  font-size: 1rem;
-  min-width: 160px;
-}
-
-.pgantt-tr-odd {
-  background: #f6fafd;
-}
-
-.pgantt-table tr:hover {
-  background: #eaf1fc;
-}
-
-.pgantt-projectname {
-  border: 1.5px solid #b6c6df;
-  border-radius: 5px;
-  padding: 6px 10px;
-  width: 100%;
-  font-weight: 700;
-  font-size: 1rem;
-  background: #f7fbfe;
-  color: #174477;
-  box-sizing: border-box;
-  outline: none;
-  transition: border 0.15s, box-shadow 0.15s;
-}
-
-.pgantt-projectname:focus {
-  border-color: #5779d0;
-  box-shadow: 0 0 0 2px #c7dbfe;
-}
-
-/* Month cells */
-.pgantt-td-month {
-  vertical-align: top;
-  min-width: 80px;
-  background: #fff;
-  padding: 5px 8px;
-  font-size: 0.97rem;
-}
-
-.pgantt-td-inactive {
-  background: #f3f4f8;
-  color: #b9bac8;
-}
-
-.pgantt-posbar {
-  background: linear-gradient(90deg, #90caf9 0%, #42a5f5 100%);
-  border: 1px solid #42a5f5;
-  border-radius: 6px;
-  margin-bottom: 6px;
-  margin-top: 2px;
-  padding: 3px 6px 3px 8px;
-  font-size: 0.93rem;
-  color: #183256;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  box-shadow: 0 1px 3px rgba(66, 165, 245, 0.09);
-  transition: background 0.2s, box-shadow 0.2s;
-}
-.pgantt-posbar:hover {
-  box-shadow: 0 3px 16px rgba(66,165,245,0.12), 0 1.5px 5px #42a5f539;
-  background: linear-gradient(90deg, #64b5f6 0%, #1976d2 100%);
-  color: #fff;
-}
-
-.pgantt-posqty {
-  width: 48px;
-  font-size: 0.93rem;
-  border: 1.5px solid #bbdefb;
-  background: #e3f2fd;
-  border-radius: 4px;
-  padding: 3px 6px;
-  color: #1c367b;
-  outline: none;
-  transition: border 0.2s, background 0.2s;
-}
-
-.pgantt-posqty:focus {
-  border-color: #1266e6;
-  background: #fff;
-}
-
-/* SUM row */
-.pgantt-td-sumlabel {
-  font-weight: bold;
-  text-align: right;
-  background: #f2f6fa;
-  color: #244764;
-  letter-spacing: 0.2px;
-}
-
-.pgantt-td-sum {
-  background: #f7fafd;
-  font-size: 0.90rem;
-  vertical-align: top;
-  padding: 7px 8px;
-}
-
-.pgantt-sumrow {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 7px;
-  padding: 1px 0;
-}
-
-.pgantt-sumtype {
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  color: #2968ac;
-}
-
-.pgantt-sumval {
-  font-weight: 600;
-  color: #2573ec;
-  font-variant-numeric: tabular-nums;
-  min-width: 16px;
-  text-align: right;
-  font-size: 1.02em;
-}
-
-.pgantt-sumval-inactive {
-  color: #b2b5c0;
-}
-
-/* Responsive adjustments */
-@media (max-width: 800px) {
-  .pgantt-title {
-    font-size: 1.1rem;
-    margin-bottom: 1rem;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-  .pgantt-root {
-    padding: 1rem 0.5rem;
+  body {
+    @apply bg-background text-foreground;
   }
-  .pgantt-table {
-    font-size: 0.95rem;
-  }
-  .pgantt-th, .pgantt-td {
-    padding: 7px 3px;
-    font-size: 0.99em;
-  }
-  .pgantt-td-month {
-    min-width: 60px;
-  }
-  .pgantt-posbar {
-    font-size: 0.90rem;
-  }
-}
-
-@media (max-width: 600px) {
-  .pgantt-title {
-    font-size: 1rem;
-  }
-  .pgantt-root {
-    padding: 0.6rem 0.2rem;
-  }
-  .pgantt-td-name {
-    font-size: 0.97rem;
-  }
-}
-
-/* Subtle focus for inputs */
-.pgantt-posqty:focus,
-.pgantt-projectname:focus {
-  box-shadow: 0 0 0 2.5px #a8d8ff70;
-  background: #ffffff;
-}
-
-.pgantt-btn {
-  background: #2563eb;
-  color: white;
-  font-size: 0.97rem;
-  border: none;
-  border-radius: 6px;
-  padding: 0.32em 0.8em;
-  margin-left: 0.2em;
-  margin-right: 0.2em;
-  cursor: pointer;
-  transition: background 0.17s, color 0.13s;
-}
-.pgantt-btn:hover, .pgantt-btn:focus {
-  background: #1542a0;
-}
-.pgantt-btn-danger {
-  background: #f01e4c !important;
-  color: white;
-}
-.pgantt-btn-danger:hover,
-.pgantt-btn-danger:focus {
-  background: #ad1836 !important;
-}
-.pgantt-btn-outline {
-  background: transparent !important;
-  color: #23395d;
-  border: 1px solid #b8bcca !important;
-}
-.pgantt-btn:active {
-  transform: translateY(1px);
-}
-.pgantt-btn-xs {
-  font-size: 1.1em;
-  padding: 0 0.45em;
-  min-width: 1.5em;
-  background: #edf2f8 !important;
-  color: #3c4962;
-  border: 1px solid #d9dbe7 !important;
-}
-.pgantt-btn-xs:hover {
-  background: #e6eeff !important;
-}
-
-.pgantt-btn-sm {
-  font-size: 0.92em;
-  padding: 0.17em 0.6em;
-}
-
-.pgantt-addpanel {
-  background: #f9fbff;
-  border: 1.5px solid #b3bbd8;
-  border-radius: 8px;
-  padding: 10px 18px;
-  margin-bottom: 16px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px 18px;
-  align-items: flex-end;
-  box-shadow: 0 1px 10px #c9dbfa19;
-}
-.pgantt-addpanel-pos {
-  background: #f0f6fc;
-  border-color: #b6d6ef;
-  gap: 10px 10px;
-  margin-bottom: 4px;
-  margin-left: 0;
-  padding: 6px 8px 6px 11px;
-}
-
-.pgantt-input, .pgantt-projectdate {
-  border: 1.6px solid #c2c9df;
-  border-radius: 5px;
-  background: #f8fbff;
-  padding: 4px 6px;
-  font-size: 0.95em;
-  margin: 0 2px;
-  outline: none;
-}
-
-.pgantt-input:focus, .pgantt-projectdate:focus {
-  border-color: #2563eb;
-  background: #ffffff;
-}
-
-.pgantt-pos-type {
-  border: 1px solid #a9dbfa;
-  border-radius: 4px;
-  padding: 2px 5px;
-  font-size: 0.92em;
-  background: #f2fcff;
-  color: #2770b3;
-  margin-right: 6px;
-}
-.pgantt-pos-type:focus {
-  border-color: #2573ec;
-  background: #fff;
 }
