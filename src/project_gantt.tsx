@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -581,8 +582,9 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({ initial
   const [addPositionOpen, setAddPositionOpen] = useState(false);
   const [addPosProjectIdx, setAddPosProjectIdx] = useState<number | null>(null);
   const [newPosition, setNewPosition] = useState<Position>(makeDefaultNewPosition(defaultMonth, defaultEnd));
+  const [onlyFuture, setOnlyFuture] = useState(true);
 
-  // Derived: months for table
+  const today = MonthYear.today();
   const months = useMemo(() => {
     if (projects.length === 0) return [];
     let minYM = projects[0].start;
@@ -591,10 +593,13 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({ initial
       if (p.start.isBefore(minYM)) minYM = p.start;
       if (p.end.isAfter(maxYM)) maxYM = p.end;
     }
+    if (onlyFuture && today.isAfter(minYM)) {
+      minYM = today;
+    }
     const arr: MonthYear[] = [];
     for (let ym = minYM; !ym.isAfter(maxYM); ym = ym.addMonths(1)) arr.push(ym);
     return arr;
-  }, [projects]);
+  }, [projects, onlyFuture, today]);
 
   const allTypes = useMemo(
     () => Array.from(new Set(projects.flatMap((p) => p.positions.map((pos) => pos.type)))),
@@ -747,6 +752,10 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({ initial
           setNewProject={setNewProject}
           onAdd={handleAddProject}
         />
+        <div className="flex items-center gap-2 ml-4">
+          <Switch checked={onlyFuture} onCheckedChange={setOnlyFuture} id="future-months-switch" />
+          <label htmlFor="future-months-switch" className="ml-1">Show only current and future months</label>
+        </div>
       </div>
       <ProjectTable
         projects={projects}
