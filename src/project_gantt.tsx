@@ -5,6 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Field, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 // --- Utility Types & Functions ---
 
@@ -280,8 +289,7 @@ function EditSheet(props: {
   );
 }
 
-// --- Table ---
-function ProjectTable(props: {
+interface ProjectTableProps {
   projects: Project[];
   months: Date[];
   allTypes: string[];
@@ -291,33 +299,35 @@ function ProjectTable(props: {
   onAddPositionClick: (pidx: number) => void;
   selectedProjectIdx: number | null;
   selectedPositionIdx: number | null;
-}) {
-  const {
-    projects, months, allTypes, sumPerTypePerMonth,
-    onProjectClick, onPositionClick, onAddPositionClick,
-    selectedProjectIdx, selectedPositionIdx
-  } = props;
+}
+
+export function ProjectTable({
+  projects,
+  months,
+  allTypes,
+  sumPerTypePerMonth,
+  onProjectClick,
+  onPositionClick,
+  onAddPositionClick,
+  selectedProjectIdx,
+  selectedPositionIdx,
+}: ProjectTableProps) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border text-sm">
-        <thead>
-          <tr>
-            <th className="text-center font-semibold py-2 min-w-[92px]">Month</th>
+      <Table>
+        <TableCaption>Project positions by month, type and project.</TableCaption>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="text-center">Month</TableHead>
             {projects.map((project, pIdx) => (
-              <th key={pIdx} className="text-center font-semibold px-3 min-w-[200px]">
-                <button
-                  type="button"
-                  className={
-                    "font-semibold px-2 underline-offset-2"
-                    + (selectedProjectIdx === pIdx && selectedPositionIdx == null
-                      ? " underline text-primary"
-                      : " hover:underline")
-                  }
-                  title="Select project"
+              <TableHead key={pIdx} className="text-center min-w-[200px]">
+                <Button
+                  variant={selectedProjectIdx === pIdx && selectedPositionIdx == null ? "outline" : "ghost"}
+                  size="sm"
                   onClick={() => onProjectClick(pIdx)}
                 >
                   {project.name}
-                </button>
+                </Button>
                 <div className="flex gap-1 justify-center text-xs text-muted-foreground">
                   {formatDateInput(project.start)}-{formatDateInput(project.end)}
                 </div>
@@ -330,46 +340,36 @@ function ProjectTable(props: {
                 >
                   + Position
                 </Button>
-              </th>
+              </TableHead>
             ))}
-            <th className="text-center font-semibold py-2 min-w-[130px]">Sum per type</th>
-          </tr>
-        </thead>
-        <tbody>
+            <TableHead className="text-center min-w-[130px]">Sum per type</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {months.map((month, mIdx) => (
-            <tr key={mIdx} className={mIdx % 2 === 1 ? "bg-muted" : undefined}>
-              <td className="text-center font-semibold">{formatMonth(month)}</td>
-              {projects.map((project, pIdx) => {
-                const isActive = project.end >= month && project.start < addMonths(month, 1);
-                const monthPositions = project.positions.map((pos, posIdx) =>
-                  (pos.end >= month && pos.start < addMonths(month, 1)) && (
-                    <button
-                      type="button"
-                      key={posIdx}
-                      className={
-                        "block text-left w-full rounded-sm border px-2 py-0.5 mb-1 cursor-pointer transition " +
-                        (selectedProjectIdx === pIdx && selectedPositionIdx === posIdx
-                          ? "bg-primary/10 border-primary font-medium"
-                          : "hover:bg-accent")
-                      }
-                      title={pos.description}
-                      onClick={e => { e.stopPropagation(); onPositionClick(pIdx, posIdx); }}
-                    >
-                      <span className="text-sm mr-2">{pos.type}</span>
-                      <span className="text-xs text-muted-foreground">{pos.quantity}</span>
-                    </button>
-                  )
-                );
-                return (
-                  <td
-                    key={pIdx}
-                    className={"align-top" + (!isActive ? " opacity-60 bg-muted-foreground/10" : "")}
-                  >
-                    {monthPositions}
-                  </td>
-                );
-              })}
-              <td className="align-top p-1">
+            <TableRow key={mIdx}>
+              <TableCell className="text-center font-semibold">{formatMonth(month)}</TableCell>
+              {projects.map((project, pIdx) => (
+                <TableCell key={pIdx} className="align-top">
+                  <div className="flex flex-col gap-y-1">
+                    {project.positions.map((pos, posIdx) =>
+                      pos.end >= month && pos.start < addMonths(month, 1) && (
+                        <Button
+                          key={posIdx}
+                          variant={selectedProjectIdx === pIdx && selectedPositionIdx === posIdx ? "outline" : "ghost"}
+                          size="sm"
+                          className="w-full justify-start"
+                          onClick={e => { e.stopPropagation(); onPositionClick(pIdx, posIdx); }}
+                        >
+                          <span className="mr-2">{pos.type}</span>
+                          <span className="text-xs text-muted-foreground">{pos.quantity}</span>
+                        </Button>
+                      )
+                    )}
+                  </div>
+                </TableCell>
+              ))}
+              <TableCell className="align-top">
                 {allTypes.map((type, tIdx) => {
                   const sum = sumPerTypePerMonth[`${tIdx}_${mIdx}`] || 0;
                   return (
@@ -379,11 +379,11 @@ function ProjectTable(props: {
                     </div>
                   );
                 })}
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }
