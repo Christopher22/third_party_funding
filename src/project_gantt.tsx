@@ -1,7 +1,8 @@
-import type { Project, Position } from "./types";
+import type { Project } from "./types";
 import React, { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-// --- util functions ---
+// --- Utility Functions (unchanged) ---
 function monthDiff(start: Date, end: Date) {
   return (end.getFullYear() - start.getFullYear()) * 12 + end.getMonth() - start.getMonth();
 }
@@ -28,8 +29,11 @@ function addMonths(dt: Date, n: number) {
 function formatMonth(dt: Date) {
   return dt.toLocaleString("default", { month: "short", year: "2-digit" });
 }
-function formatDateInput(dt: Date) {
-  return dt.toISOString().split("T")[0];
+function formatDateInput(dt: Date | string | undefined | null) {
+  if (!dt) return "";
+  if (typeof dt === "string") return dt;
+  if (dt instanceof Date && !isNaN(dt.getTime())) return dt.toISOString().split("T")[0];
+  return "";
 }
 
 // --- Dialog Forms State ---
@@ -59,9 +63,7 @@ const makeDefaultNewPosition = (start: Date, end: Date): NewPositionFormState =>
   end: formatDateInput(end),
 });
 
-// ------------------------------ COMPONENTS -----------------------------
-
-// Add Project Dialog
+// Add Project Dialog (unchanged)
 function AddProjectDialog({ newProject, setNewProject, show, setShow, addProject }: {
   newProject: NewProjectFormState,
   setNewProject: (np: NewProjectFormState) => void,
@@ -77,9 +79,7 @@ function AddProjectDialog({ newProject, setNewProject, show, setShow, addProject
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add New Project</DialogTitle>
-          <DialogDescription>
-            Set project name and schedule.
-          </DialogDescription>
+          <DialogDescription>Set project name and schedule.</DialogDescription>
         </DialogHeader>
         <form className="space-y-4" onSubmit={addProject} autoComplete="off">
           <Input
@@ -120,7 +120,7 @@ function AddProjectDialog({ newProject, setNewProject, show, setShow, addProject
   );
 }
 
-// Add Position Dialog
+// Add Position Dialog (unchanged)
 function AddPositionDialog({ show, setShow, newPosition, setNewPosition, addPosition }: {
   show: boolean,
   setShow: (v: boolean) => void,
@@ -131,14 +131,12 @@ function AddPositionDialog({ show, setShow, newPosition, setNewPosition, addPosi
   return (
     <Dialog open={show} onOpenChange={setShow}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="secondary">+ Position</Button>
+        <div />
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add Position</DialogTitle>
-          <DialogDescription>
-            Enter details for the position.
-          </DialogDescription>
+          <DialogDescription>Enter details for the position.</DialogDescription>
         </DialogHeader>
         <form className="space-y-3" autoComplete="off" onSubmit={addPosition}>
           <Input
@@ -194,169 +192,149 @@ function AddPositionDialog({ show, setShow, newPosition, setNewPosition, addPosi
   );
 }
 
-// Single Panel to edit selected project or position
-function EditPanel({
-  selectedProjectIdx,
-  selectedPositionIdx,
-  projects,
-  updateProject,
-  removeProject,
-  updatePosition,
-  removePosition,
-  clearSelection,
+// --- Shared Sheet for Editing Project or Position ---
+function EditSheet({
+  open, onOpenChange,
+  isProjectEdit,
+  editableItem,
+  setEditableItem,
+  onSave,
+  onDelete,
 }: {
-  selectedProjectIdx: number | null,
-  selectedPositionIdx: number | null,
-  projects: Project[],
-  updateProject: (idx: number, proj: Partial<Project>) => void,
-  removeProject: (idx: number) => void,
-  updatePosition: (pidx: number, posIdx: number, pos: Partial<Position>) => void,
-  removePosition: (pidx: number, posIdx: number) => void,
-  clearSelection: () => void,
+  open: boolean,
+  onOpenChange: (v: boolean) => void,
+  isProjectEdit: boolean,
+  editableItem: any,
+  setEditableItem: (item: any) => void,
+  onSave: () => void,
+  onDelete: () => void,
 }) {
-  if (selectedProjectIdx == null) return null;
-  const project = projects[selectedProjectIdx];
-  if (!project) return null;
-  if (selectedPositionIdx == null) {
-    // --- PROJECT editing
-    return (
-      <div className="p-4 border rounded mt-4">
-        <div className="flex justify-between items-center mb-2">
-          <h4 className="font-semibold">Edit Project</h4>
-          <Button size="sm" variant="outline" onClick={clearSelection}>Close</Button>
-        </div>
-        <div className="mb-2">
-          <label className="font-medium text-sm">Name:</label>
-          <Input
-            type="text"
-            className="w-40"
-            value={project.name}
-            onChange={e => updateProject(selectedProjectIdx, { name: e.target.value })}
-          />
-        </div>
-        <div className="mb-2 flex gap-2">
-          <label className="font-medium text-sm">Start:</label>
-          <Input
-            type="date"
-            className="w-32"
-            value={formatDateInput(project.start)}
-            onChange={e => updateProject(selectedProjectIdx, { start: new Date(e.target.value) })}
-          />
-          <label className="font-medium text-sm">End:</label>
-          <Input
-            type="date"
-            className="w-32"
-            min={formatDateInput(project.start)}
-            value={formatDateInput(project.end)}
-            onChange={e => updateProject(selectedProjectIdx, { end: new Date(e.target.value) })}
-          />
-        </div>
-        <Button
-          type="button"
-          variant="destructive"
-          onClick={() => {
-            if (window.confirm("Delete project?")) {
-              removeProject(selectedProjectIdx);
-              clearSelection();
-            }
-          }}
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>
+            {isProjectEdit ? "Edit Project" : "Edit Position"}
+          </SheetTitle>
+          <SheetDescription>
+            {isProjectEdit
+              ? "Edit the project details below."
+              : "Edit the position details below."}
+          </SheetDescription>
+        </SheetHeader>
+        <form
+          className="grid gap-4 mt-2"
+          onSubmit={e => { e.preventDefault(); onSave(); }}
         >
-          Delete Project
-        </Button>
-      </div>
-    );
-  } else {
-    // --- POSITION editing
-    const pos = project.positions[selectedPositionIdx];
-    if (!pos) return null;
-    return (
-      <div className="p-4 border rounded mt-4">
-        <div className="flex justify-between items-center mb-2">
-          <h4 className="font-semibold">Edit Position</h4>
-          <Button size="sm" variant="outline" onClick={clearSelection}>Close</Button>
-        </div>
-        <div className="mb-2">
-          <label className="font-medium text-sm">Description:</label>
-          <Input
-            type="text"
-            className="w-48"
-            value={pos.description}
-            onChange={e => updatePosition(selectedProjectIdx, selectedPositionIdx, { description: e.target.value })}
-          />
-        </div>
-        <div className="mb-2 flex gap-2">
-          <label className="font-medium text-sm">Type:</label>
-          <Input
-            type="text"
-            className="w-20"
-            value={pos.type}
-            onChange={e => updatePosition(selectedProjectIdx, selectedPositionIdx, { type: e.target.value })}
-          />
-          <label className="font-medium text-sm">Quantity:</label>
-          <Input
-            type="number"
-            min={0}
-            step={0.01}
-            className="w-20"
-            value={pos.quantity}
-            onChange={e => updatePosition(selectedProjectIdx, selectedPositionIdx, { quantity: Number(e.target.value) })}
-          />
-        </div>
-        <div className="mb-2 flex gap-2">
-          <label className="font-medium text-sm">Start:</label>
-          <Input
-            type="date"
-            className="w-32"
-            value={formatDateInput(pos.start)}
-            onChange={e => updatePosition(selectedProjectIdx, selectedPositionIdx, { start: new Date(e.target.value) })}
-          />
-          <label className="font-medium text-sm">End:</label>
-          <Input
-            type="date"
-            className="w-32"
-            min={formatDateInput(pos.start)}
-            value={formatDateInput(pos.end)}
-            onChange={e => updatePosition(selectedProjectIdx, selectedPositionIdx, { end: new Date(e.target.value) })}
-          />
-        </div>
-        <Button
-          type="button"
-          variant="destructive"
-          onClick={() => {
-            if (window.confirm("Delete position?")) {
-              removePosition(selectedProjectIdx, selectedPositionIdx);
-              clearSelection();
-            }
-          }}
-        >
-          Delete Position
-        </Button>
-      </div>
-    );
-  }
+          {isProjectEdit ? (
+            <>
+              <div>
+                <label className="font-medium text-sm">Name:</label>
+                <Input
+                  type="text"
+                  className="w-48"
+                  value={editableItem?.name || ""}
+                  onChange={e => setEditableItem({ ...editableItem, name: e.target.value })}
+                />
+              </div>
+              <div className="flex gap-2">
+                <label className="font-medium text-sm">Start:</label>
+                <Input
+                  type="date"
+                  className="w-32"
+                  value={formatDateInput(editableItem?.start)}
+                  onChange={e => setEditableItem({ ...editableItem, start: new Date(e.target.value) })}
+                />
+                <label className="font-medium text-sm">End:</label>
+                <Input
+                  type="date"
+                  className="w-32"
+                  value={formatDateInput(editableItem?.end)}
+                  min={formatDateInput(editableItem?.start)}
+                  onChange={e => setEditableItem({ ...editableItem, end: new Date(e.target.value) })}
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <label className="font-medium text-sm">Description:</label>
+                <Input
+                  type="text"
+                  className="w-48"
+                  value={editableItem?.description || ""}
+                  onChange={e => setEditableItem({ ...editableItem, description: e.target.value })}
+                />
+              </div>
+              <div className="flex gap-2">
+                <label className="font-medium text-sm">Type:</label>
+                <Input
+                  type="text"
+                  className="w-20"
+                  value={editableItem?.type || ""}
+                  onChange={e => setEditableItem({ ...editableItem, type: e.target.value })}
+                />
+                <label className="font-medium text-sm">Quantity:</label>
+                <Input
+                  type="number"
+                  className="w-20"
+                  min={0}
+                  step={0.01}
+                  value={editableItem?.quantity ?? 1}
+                  onChange={e => setEditableItem({ ...editableItem, quantity: Number(e.target.value) })}
+                />
+              </div>
+              <div className="flex gap-2">
+                <label className="font-medium text-sm">Start:</label>
+                <Input
+                  type="date"
+                  className="w-32"
+                  value={formatDateInput(editableItem?.start)}
+                  onChange={e => setEditableItem({ ...editableItem, start: new Date(e.target.value) })}
+                />
+                <label className="font-medium text-sm">End:</label>
+                <Input
+                  type="date"
+                  className="w-32"
+                  min={formatDateInput(editableItem?.start)}
+                  value={formatDateInput(editableItem?.end)}
+                  onChange={e => setEditableItem({ ...editableItem, end: new Date(e.target.value) })}
+                />
+              </div>
+            </>
+          )}
+
+          <SheetFooter>
+            <Button type="submit">Save changes</Button>
+            <SheetClose asChild>
+              <Button type="button" variant="outline">Close</Button>
+            </SheetClose>
+            <Button type="button" variant="destructive" onClick={onDelete}>
+              {isProjectEdit ? "Delete Project" : "Delete Position"}
+            </Button>
+          </SheetFooter>
+        </form>
+      </SheetContent>
+    </Sheet>
+  );
 }
 
-// The table -- clickable for selection, NO editing inline, no buttons per project/position
+// --- Table ---
 function ProjectTable({
-  projects,
-  months,
-  allTypes,
-  sumPerTypePerMonth,
-  selectedProjectIdx,
-  selectedPositionIdx,
-  setSelectedProjectIdx,
-  setSelectedPositionIdx,
+  projects, months, allTypes, sumPerTypePerMonth,
+  onProjectClick, onPositionClick,
   onAddPositionClick,
+  selectedProjectIdx, selectedPositionIdx,
 }: {
   projects: Project[],
   months: Date[],
   allTypes: string[],
   sumPerTypePerMonth: Record<string, number>,
+  onProjectClick: (pidx: number) => void,
+  onPositionClick: (pidx: number, posIdx: number) => void,
+  onAddPositionClick: (pidx: number) => void,
   selectedProjectIdx: number | null,
   selectedPositionIdx: number | null,
-  setSelectedProjectIdx: (idx: number | null) => void,
-  setSelectedPositionIdx: (idx: number | null) => void,
-  onAddPositionClick: (pidx: number) => void,
 }) {
   return (
     <div className="overflow-x-auto">
@@ -370,20 +348,17 @@ function ProjectTable({
                   type="button"
                   className={
                     "font-semibold px-2 underline-offset-2" +
-                    (selectedProjectIdx === pIdx && selectedPositionIdx === null
+                    (selectedProjectIdx === pIdx && selectedPositionIdx == null
                       ? " underline text-primary"
                       : " hover:underline")
                   }
                   title="Select project"
-                  onClick={() => {
-                    setSelectedProjectIdx(pIdx);
-                    setSelectedPositionIdx(null);
-                  }}
+                  onClick={() => onProjectClick(pIdx)}
                 >
                   {project.name}
                 </button>
                 <div className="flex gap-1 justify-center text-xs text-muted-foreground">
-                  {formatDateInput(project.start)} - {formatDateInput(project.end)}
+                  {formatDateInput(project.start)}-{formatDateInput(project.end)}
                 </div>
                 <Button
                   onClick={() => onAddPositionClick(pIdx)}
@@ -396,66 +371,50 @@ function ProjectTable({
                 </Button>
               </th>
             ))}
-            <th className="text-center font-semibold py-2 min-w-[130px]">
-              Sum per type
-            </th>
+            <th className="text-center font-semibold py-2 min-w-[130px]">Sum per type</th>
           </tr>
         </thead>
         <tbody>
           {months.map((month, mIdx) => (
             <tr key={mIdx} className={mIdx % 2 === 1 ? "bg-muted" : undefined}>
-              {/* Month label */}
               <td className="text-center font-semibold">{formatMonth(month)}</td>
               {projects.map((project, pIdx) => {
                 const isActive = project.end >= month && project.start < addMonths(month, 1);
-                const monthPositions = project.positions.map((pos, posIdx) => {
-                  if (pos.end >= month && pos.start < addMonths(month, 1)) {
-                    return (
-                      <button
-                        type="button"
-                        key={posIdx}
-                        className={
-                          "block text-left w-full rounded-sm border px-2 py-0.5 mb-1 cursor-pointer transition " +
-                          (selectedProjectIdx === pIdx && selectedPositionIdx === posIdx
-                            ? "bg-primary/10 border-primary font-medium"
-                            : "hover:bg-accent")
-                        }
-                        title={pos.description}
-                        onClick={e => {
-                          e.stopPropagation();
-                          setSelectedProjectIdx(pIdx);
-                          setSelectedPositionIdx(posIdx);
-                        }}
-                      >
-                        <span className="text-sm mr-2">{pos.type}</span>
-                        <span className="text-xs text-muted-foreground">{pos.quantity}</span>
-                      </button>
-                    );
-                  }
-                  return null;
-                }).filter(Boolean);
+                const monthPositions = project.positions.map((pos, posIdx) =>
+                  (pos.end >= month && pos.start < addMonths(month, 1)) && (
+                    <button
+                      type="button"
+                      key={posIdx}
+                      className={
+                        "block text-left w-full rounded-sm border px-2 py-0.5 mb-1 cursor-pointer transition " +
+                        (selectedProjectIdx === pIdx && selectedPositionIdx === posIdx
+                          ? "bg-primary/10 border-primary font-medium"
+                          : "hover:bg-accent")
+                      }
+                      title={pos.description}
+                      onClick={e => { e.stopPropagation(); onPositionClick(pIdx, posIdx); }}
+                    >
+                      <span className="text-sm mr-2">{pos.type}</span>
+                      <span className="text-xs text-muted-foreground">{pos.quantity}</span>
+                    </button>
+                  )
+                );
                 return (
                   <td
                     key={pIdx}
-                    className={
-                      "align-top" +
-                      (!isActive ? " opacity-60 bg-muted-foreground/10" : "")
-                    }
+                    className={"align-top" + (!isActive ? " opacity-60 bg-muted-foreground/10" : "")}
                   >
                     {monthPositions}
                   </td>
                 );
               })}
-              {/* Per-type sum */}
               <td className="align-top p-1">
                 {allTypes.map((type, tIdx) => {
                   const sum = sumPerTypePerMonth[`${tIdx}_${mIdx}`] || 0;
                   return (
                     <div key={type} className="flex justify-between">
                       <span className="text-muted-foreground text-xs">{type}</span>
-                      <span className={sum ? "font-semibold" : "opacity-40"}>
-                        {sum}
-                      </span>
+                      <span className={sum ? "font-semibold" : "opacity-40"}>{sum}</span>
                     </div>
                   );
                 })}
@@ -472,7 +431,6 @@ function ProjectTable({
 export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({
   initialProjects,
 }) => {
-  // --- Date/Fix up state ---
   const fixDates = (proj: Project): Project => ({
     ...proj,
     start: new Date(proj.start),
@@ -483,22 +441,24 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({
       end: new Date(pos.end),
     })),
   });
-
   const [projects, setProjects] = useState<Project[]>(initialProjects.map(fixDates));
-  const [selectedProjectIdx, setSelectedProjectIdx] = useState<number | null>(null);
-  const [selectedPositionIdx, setSelectedPositionIdx] = useState<number | null>(null);
 
-  // --- State for Add Project/Position dialogs ---
+  // Sheet & selection states:
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [sheetProjectIdx, setSheetProjectIdx] = useState<number | null>(null);
+  const [sheetPositionIdx, setSheetPositionIdx] = useState<number | null>(null);
+  const [editableItem, setEditableItem] = useState<any>(null);
+
+  // Add Project/Position dialog states:
   const [showAddProject, setShowAddProject] = useState(false);
   const [newProject, setNewProject] = useState<NewProjectFormState>(defaultNewProject);
-
   const [showAddPosition, setShowAddPosition] = useState(false);
   const [addPosProjectIdx, setAddPosProjectIdx] = useState<number | null>(null);
   const [newPosition, setNewPosition] = useState<NewPositionFormState>(
     makeDefaultNewPosition(new Date(), new Date())
   );
 
-  // -- months/types calculations
+  // Months/types calculations (unchanged)
   const months = useMemo(() => {
     if (projects.length === 0) return [];
     const starts = projects.map((p) => p.start);
@@ -506,11 +466,8 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({
     const minD = minDate(...starts);
     const maxD = maxDate(...ends);
     const monthCount = monthDiff(minD, maxD) + 1;
-    return Array.from({ length: monthCount }, (_, i) =>
-      addMonths(minD, i)
-    );
+    return Array.from({ length: monthCount }, (_, i) => addMonths(minD, i));
   }, [projects]);
-
   const allTypes = useMemo(
     () =>
       Array.from(
@@ -518,7 +475,6 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({
       ),
     [projects]
   );
-
   const sumPerTypePerMonth = useMemo(() => {
     const result: Record<string, number> = {};
     for (let mIdx = 0; mIdx < months.length; ++mIdx) {
@@ -537,47 +493,75 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({
     return result;
   }, [projects, months, allTypes]);
 
-  // -- Edit handlers (project/position)
-  function updateProject(idx: number, change: Partial<Project>) {
-    setProjects(projs => projs.map((p, i) => i === idx ? { ...p, ...change } : p));
+  // --- Handlers for opening the edit Sheet ---
+  function openProjectSheet(pidx: number) {
+    setEditableItem({ ...projects[pidx] });
+    setSheetProjectIdx(pidx);
+    setSheetPositionIdx(null);
+    setEditSheetOpen(true);
   }
-  function removeProject(idx: number) {
-    setProjects(projs => projs.filter((_, i) => i !== idx));
-    if (selectedProjectIdx === idx) {
-      setSelectedProjectIdx(null);
-      setSelectedPositionIdx(null);
-    }
+  function openPositionSheet(pidx: number, posIdx: number) {
+    setEditableItem({ ...projects[pidx].positions[posIdx] });
+    setSheetProjectIdx(pidx);
+    setSheetPositionIdx(posIdx);
+    setEditSheetOpen(true);
   }
-  function updatePosition(pidx: number, posIdx: number, change: Partial<Position>) {
-    setProjects(projs =>
-      projs.map((p, i) =>
-        i === pidx
-          ? {
-              ...p,
-              positions: p.positions.map((pos, k) => k === posIdx ? { ...pos, ...change } : pos),
-            }
-          : p
-      )
-    );
-  }
-  function removePosition(pidx: number, posIdx: number) {
-    setProjects(projs =>
-      projs.map((p, i) =>
-        i === pidx
-          ? { ...p, positions: p.positions.filter((_, k) => k !== posIdx) }
-          : p
-      )
-    );
-    if (selectedProjectIdx === pidx && selectedPositionIdx === posIdx) {
-      setSelectedPositionIdx(null);
-    }
-  }
-  function clearSelection() {
-    setSelectedProjectIdx(null);
-    setSelectedPositionIdx(null);
+  function closeEditSheet() {
+    setEditSheetOpen(false);
+    setSheetProjectIdx(null);
+    setSheetPositionIdx(null);
+    setEditableItem(null);
   }
 
-  // --- Add Project
+  // --- Save/Remove from sheet ---
+  function saveSheetEdit() {
+    if (sheetProjectIdx == null) return closeEditSheet();
+    if (sheetPositionIdx == null) {
+      // Project editing
+      setProjects(projs => projs.map((p, idx) => idx === sheetProjectIdx ? {
+        ...p,
+        name: editableItem.name,
+        start: new Date(editableItem.start),
+        end: new Date(editableItem.end),
+      } : p));
+    } else {
+      // Position editing
+      setProjects(projs => projs.map((p, idx) => idx === sheetProjectIdx ? {
+        ...p,
+        positions: p.positions.map((pos, k) => k === sheetPositionIdx
+          ? {
+              ...pos,
+              description: editableItem.description,
+              quantity: +editableItem.quantity,
+              type: editableItem.type,
+              start: new Date(editableItem.start),
+              end: new Date(editableItem.end),
+            }
+          : pos
+        )
+      } : p));
+    }
+    closeEditSheet();
+  }
+  function deleteSheetEdit() {
+    if (sheetProjectIdx == null) return closeEditSheet();
+    if (sheetPositionIdx == null) {
+      if (window.confirm("Delete project?")) {
+        setProjects(projs => projs.filter((_, idx) => idx !== sheetProjectIdx));
+        closeEditSheet();
+      }
+    } else {
+      if (window.confirm("Delete position?")) {
+        setProjects(projs => projs.map((p, idx) => idx === sheetProjectIdx
+          ? { ...p, positions: p.positions.filter((_, k) => k !== sheetPositionIdx) }
+          : p
+        ));
+        closeEditSheet();
+      }
+    }
+  }
+
+  // --- Add Project ---
   function handleAddProject(ev: React.FormEvent) {
     ev.preventDefault();
     const { name, start, end } = newProject;
@@ -595,7 +579,7 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({
     setNewProject(defaultNewProject);
   }
 
-  // --- Add Position
+  // --- Add Position ---
   function handleAddPositionSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (addPosProjectIdx == null) return;
@@ -621,7 +605,6 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({
     setShowAddPosition(false);
     setNewPosition(makeDefaultNewPosition(projects[addPosProjectIdx].start, projects[addPosProjectIdx].end));
   }
-
   function handleAddPositionClick(pidx: number) {
     setAddPosProjectIdx(pidx);
     setShowAddPosition(true);
@@ -641,15 +624,12 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({
         />
       </div>
       <ProjectTable
-        projects={projects}
-        months={months}
-        allTypes={allTypes}
-        sumPerTypePerMonth={sumPerTypePerMonth}
-        selectedProjectIdx={selectedProjectIdx}
-        selectedPositionIdx={selectedPositionIdx}
-        setSelectedProjectIdx={setSelectedProjectIdx}
-        setSelectedPositionIdx={setSelectedPositionIdx}
+        projects={projects} months={months} allTypes={allTypes} sumPerTypePerMonth={sumPerTypePerMonth}
+        onProjectClick={openProjectSheet}
+        onPositionClick={openPositionSheet}
         onAddPositionClick={handleAddPositionClick}
+        selectedProjectIdx={sheetProjectIdx}
+        selectedPositionIdx={sheetPositionIdx}
       />
       <AddPositionDialog
         show={showAddPosition}
@@ -658,15 +638,14 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({
         setNewPosition={setNewPosition}
         addPosition={handleAddPositionSubmit}
       />
-      <EditPanel
-        selectedProjectIdx={selectedProjectIdx}
-        selectedPositionIdx={selectedPositionIdx}
-        projects={projects}
-        updateProject={updateProject}
-        removeProject={removeProject}
-        updatePosition={updatePosition}
-        removePosition={removePosition}
-        clearSelection={clearSelection}
+      <EditSheet
+        open={editSheetOpen}
+        onOpenChange={open => !open && closeEditSheet()}
+        isProjectEdit={sheetPositionIdx == null}
+        editableItem={editableItem}
+        setEditableItem={setEditableItem}
+        onSave={saveSheetEdit}
+        onDelete={deleteSheetEdit}
       />
     </div>
   );
