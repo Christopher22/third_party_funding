@@ -2,7 +2,14 @@ import type { Project } from "./types";
 import React, { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@/components/ui/field"
 import {
   Dialog,
   DialogContent,
@@ -192,7 +199,6 @@ function AddPositionDialog({ show, setShow, newPosition, setNewPosition, addPosi
   );
 }
 
-// --- Shared Sheet for Editing Project or Position ---
 function EditSheet({
   open, onOpenChange,
   isProjectEdit,
@@ -209,6 +215,10 @@ function EditSheet({
   onSave: () => void,
   onDelete: () => void,
 }) {
+  const idPrefix = isProjectEdit
+    ? "project-edit-"
+    : "pos-edit-";
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent>
@@ -222,98 +232,124 @@ function EditSheet({
               : "Edit the position details below."}
           </SheetDescription>
         </SheetHeader>
-        <form
-          className="grid gap-4 mt-2"
-          onSubmit={e => { e.preventDefault(); onSave(); }}
-        >
-          {isProjectEdit ? (
-            <>
-              <div>
-                <label className="font-medium text-sm">Name:</label>
-                <Input
-                  type="text"
-                  className="w-48"
-                  value={editableItem?.name || ""}
-                  onChange={e => setEditableItem({ ...editableItem, name: e.target.value })}
-                />
-              </div>
-              <div className="flex gap-2">
-                <label className="font-medium text-sm">Start:</label>
-                <Input
-                  type="date"
-                  className="w-32"
-                  value={formatDateInput(editableItem?.start)}
-                  onChange={e => setEditableItem({ ...editableItem, start: new Date(e.target.value) })}
-                />
-                <label className="font-medium text-sm">End:</label>
-                <Input
-                  type="date"
-                  className="w-32"
-                  value={formatDateInput(editableItem?.end)}
-                  min={formatDateInput(editableItem?.start)}
-                  onChange={e => setEditableItem({ ...editableItem, end: new Date(e.target.value) })}
-                />
-              </div>
-            </>
-          ) : (
-            <>
-              <div>
-                <label className="font-medium text-sm">Description:</label>
-                <Input
-                  type="text"
-                  className="w-48"
-                  value={editableItem?.description || ""}
-                  onChange={e => setEditableItem({ ...editableItem, description: e.target.value })}
-                />
-              </div>
-              <div className="flex gap-2">
-                <label className="font-medium text-sm">Type:</label>
-                <Input
-                  type="text"
-                  className="w-20"
-                  value={editableItem?.type || ""}
-                  onChange={e => setEditableItem({ ...editableItem, type: e.target.value })}
-                />
-                <label className="font-medium text-sm">Quantity:</label>
-                <Input
-                  type="number"
-                  className="w-20"
-                  min={0}
-                  step={0.01}
-                  value={editableItem?.quantity ?? 1}
-                  onChange={e => setEditableItem({ ...editableItem, quantity: Number(e.target.value) })}
-                />
-              </div>
-              <div className="flex gap-2">
-                <label className="font-medium text-sm">Start:</label>
-                <Input
-                  type="date"
-                  className="w-32"
-                  value={formatDateInput(editableItem?.start)}
-                  onChange={e => setEditableItem({ ...editableItem, start: new Date(e.target.value) })}
-                />
-                <label className="font-medium text-sm">End:</label>
-                <Input
-                  type="date"
-                  className="w-32"
-                  min={formatDateInput(editableItem?.start)}
-                  value={formatDateInput(editableItem?.end)}
-                  onChange={e => setEditableItem({ ...editableItem, end: new Date(e.target.value) })}
-                />
-              </div>
-            </>
-          )}
-
-          <SheetFooter>
-            <Button type="submit">Save changes</Button>
-            <SheetClose asChild>
-              <Button type="button" variant="outline">Close</Button>
-            </SheetClose>
-            <Button type="button" variant="destructive" onClick={onDelete}>
-              {isProjectEdit ? "Delete Project" : "Delete Position"}
-            </Button>
-          </SheetFooter>
-        </form>
+        <div className="grid flex-1 auto-rows-min gap-6 px-4">
+          <form
+            onSubmit={e => { e.preventDefault(); onSave(); }}
+          >
+            <FieldGroup>
+              <FieldSet>
+                <FieldLegend>
+                  {isProjectEdit ? "Project Details" : "Position Details"}
+                </FieldLegend>
+                <FieldGroup>
+                  {isProjectEdit ? (
+                    <>
+                      <Field>
+                        <FieldLabel htmlFor={idPrefix + "name"}>Name</FieldLabel>
+                        <Input
+                          id={idPrefix + "name"}
+                          type="text"
+                          required
+                          value={editableItem?.name || ""}
+                          onChange={e => setEditableItem({ ...editableItem, name: e.target.value })}
+                        />
+                      </Field>
+                      <div className="grid gap-4">
+                        <Field>
+                          <FieldLabel htmlFor={idPrefix + "start"}>Start</FieldLabel>
+                          <Input
+                            id={idPrefix + "start"}
+                            type="date"
+                            required
+                            value={formatDateInput(editableItem?.start)}
+                            onChange={e => setEditableItem({ ...editableItem, start: new Date(e.target.value) })}
+                          />
+                        </Field>
+                        <Field>
+                          <FieldLabel htmlFor={idPrefix + "end"}>End</FieldLabel>
+                          <Input
+                            id={idPrefix + "end"}
+                            type="date"
+                            required
+                            min={formatDateInput(editableItem?.start)}
+                            value={formatDateInput(editableItem?.end)}
+                            onChange={e => setEditableItem({ ...editableItem, end: new Date(e.target.value) })}
+                          />
+                        </Field>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <Field>
+                        <FieldLabel htmlFor={idPrefix + "description"}>Description</FieldLabel>
+                        <Input
+                          id={idPrefix + "description"}
+                          type="text"
+                          required
+                          value={editableItem?.description || ""}
+                          onChange={e => setEditableItem({ ...editableItem, description: e.target.value })}
+                        />
+                      </Field>
+                      <div className="grid gap-4">
+                        <Field>
+                          <FieldLabel htmlFor={idPrefix + "type"}>Type</FieldLabel>
+                          <Input
+                            id={idPrefix + "type"}
+                            type="text"
+                            required
+                            value={editableItem?.type || ""}
+                            onChange={e => setEditableItem({ ...editableItem, type: e.target.value })}
+                          />
+                        </Field>
+                        <Field>
+                          <FieldLabel htmlFor={idPrefix + "quantity"}>Quantity</FieldLabel>
+                          <Input
+                            id={idPrefix + "quantity"}
+                            type="number"
+                            min={0}
+                            step={0.01}
+                            required
+                            value={editableItem?.quantity ?? 1}
+                            onChange={e => setEditableItem({ ...editableItem, quantity: Number(e.target.value) })}
+                          />
+                        </Field>
+                      </div>
+                      <div className="grid gap-4">
+                        <Field>
+                          <FieldLabel htmlFor={idPrefix + "start"}>Start</FieldLabel>
+                          <Input
+                            id={idPrefix + "start"}
+                            type="date"
+                            required
+                            value={formatDateInput(editableItem?.start)}
+                            onChange={e => setEditableItem({ ...editableItem, start: new Date(e.target.value) })}
+                          />
+                        </Field>
+                        <Field>
+                          <FieldLabel htmlFor={idPrefix + "end"}>End</FieldLabel>
+                          <Input
+                            id={idPrefix + "end"}
+                            type="date"
+                            required
+                            min={formatDateInput(editableItem?.start)}
+                            value={formatDateInput(editableItem?.end)}
+                            onChange={e => setEditableItem({ ...editableItem, end: new Date(e.target.value) })}
+                          />
+                        </Field>
+                      </div>
+                    </>
+                  )}
+                </FieldGroup>
+              </FieldSet>
+              <SheetFooter>
+                <Button type="submit">Save changes</Button>
+                <Button variant="destructive" type="button" onClick={onDelete}>
+                  {isProjectEdit ? "Delete Project" : "Delete Position"}
+                </Button>
+              </SheetFooter>
+            </FieldGroup>
+          </form>
+        </div>
       </SheetContent>
     </Sheet>
   );
@@ -530,13 +566,13 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({
         ...p,
         positions: p.positions.map((pos, k) => k === sheetPositionIdx
           ? {
-              ...pos,
-              description: editableItem.description,
-              quantity: +editableItem.quantity,
-              type: editableItem.type,
-              start: new Date(editableItem.start),
-              end: new Date(editableItem.end),
-            }
+            ...pos,
+            description: editableItem.description,
+            quantity: +editableItem.quantity,
+            type: editableItem.type,
+            start: new Date(editableItem.start),
+            end: new Date(editableItem.end),
+          }
           : pos
         )
       } : p));
@@ -588,18 +624,18 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({
     setProjects(projects.map((p, idx) =>
       idx === addPosProjectIdx
         ? {
-            ...p,
-            positions: [
-              ...p.positions,
-              {
-                description: np.description,
-                quantity: Number(np.quantity),
-                type: np.type,
-                start: new Date(np.start),
-                end: new Date(np.end),
-              }
-            ]
-          }
+          ...p,
+          positions: [
+            ...p.positions,
+            {
+              description: np.description,
+              quantity: Number(np.quantity),
+              type: np.type,
+              start: new Date(np.start),
+              end: new Date(np.end),
+            }
+          ]
+        }
         : p
     ));
     setShowAddPosition(false);
