@@ -9,6 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -18,6 +19,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@/components/ui/item"
 
 // --- MONTH+YEAR CLASS ---
 
@@ -197,14 +205,14 @@ function AddPositionDialog(props: {
   newPosition: Position;
   setNewPosition: (v: Position) => void;
   onAdd: (e: FormEvent) => void;
-  allTypes: string[]; // --- MODIFIED: Accept allTypes as props ---
+  allTypes: string[];
 }) {
   const { open, onOpenChange, newPosition, setNewPosition, onAdd, allTypes } = props;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Position</DialogTitle>
+          <DialogTitle>Add position</DialogTitle>
           <DialogDescription>Enter details for the position.</DialogDescription>
         </DialogHeader>
         <form className="space-y-3" autoComplete="off" onSubmit={onAdd}>
@@ -212,7 +220,6 @@ function AddPositionDialog(props: {
             value={newPosition.description}
             onChange={e => setNewPosition({ ...newPosition, description: e.target.value })}
           />
-          {/* --- MODIFIED: Use datalist for type field --- */}
           <Input
             required
             placeholder="Type"
@@ -223,7 +230,6 @@ function AddPositionDialog(props: {
           <datalist id="position-type-list">
             {allTypes.map(type => <option key={type} value={type} />)}
           </datalist>
-          {/* --- END MODIFIED --- */}
           <Input
             type="number"
             min={0}
@@ -281,7 +287,7 @@ function EditSheet(props: {
   setSheet: (sheet: EditSheetState) => void;
   onSave: () => void;
   onDelete: () => void;
-  allTypes: string[]; // --- MODIFIED: Accept allTypes as props ---
+  allTypes: string[];
 }) {
   const { open, onOpenChange, sheet, setSheet, onSave, onDelete, allTypes } = props;
   if (!sheet) return null;
@@ -358,7 +364,7 @@ function EditSheet(props: {
                       <div className="grid gap-4">
                         <Field>
                           <FieldLabel htmlFor={idPrefix + "type"}>Type</FieldLabel>
-                          {/* --- MODIFIED: Use datalist for type field --- */}
+
                           <Input
                             id={idPrefix + "type"}
                             type="text"
@@ -372,7 +378,6 @@ function EditSheet(props: {
                           <datalist id="position-type-list">
                             {allTypes.map(type => <option key={type} value={type} />)}
                           </datalist>
-                          {/* --- END MODIFIED --- */}
                         </Field>
                         <Field>
                           <FieldLabel htmlFor={idPrefix + "quantity"}>Quantity</FieldLabel>
@@ -464,34 +469,42 @@ function ProjectTable({
   selectedPositionIdx,
 }: ProjectTableProps) {
   return (
-    <div className="overflow-x-auto">
-      <Table>
+    <div className="overflow-x-auto w-full">
+      <Table className="w-full">
         <TableCaption>Project positions by month, type and project.</TableCaption>
         <TableHeader>
           <TableRow>
             <TableHead className="text-center">Month</TableHead>
             {projects.map((project, pIdx) => (
-              <TableHead key={pIdx} className="text-center min-w-[200px]">
-                <Button
-                  variant={selectedProjectIdx === pIdx && selectedPositionIdx == null ? "outline" : "ghost"}
-                  size="sm"
-                  onClick={() => onProjectClick(pIdx)}
-                  type="button"
-                >
-                  {project.name}
-                </Button>
-                <div className="flex gap-1 justify-center text-xs text-muted-foreground">
-                  {project.start.toShortString()}-{project.end.toShortString()}
-                </div>
-                <Button
-                  onClick={() => onAddPositionClick(pIdx)}
-                  className="mt-2"
-                  size="sm"
-                  variant="secondary"
-                  type="button"
-                >
-                  + Position
-                </Button>
+              <TableHead key={pIdx}>
+                <Item>
+                  <ItemContent>
+                    <ItemTitle>
+                      <Button
+                        variant={selectedProjectIdx === pIdx && selectedPositionIdx == null ? "outline" : "ghost"}
+                        size="sm"
+                        onClick={() => onProjectClick(pIdx)}
+                        type="button"
+                      >
+                        {project.name}
+                      </Button>
+                    </ItemTitle>
+                    <ItemDescription>
+                      {project.start.toShortString()} - {project.end.toShortString()}
+                    </ItemDescription>
+                  </ItemContent>
+                  <ItemActions>
+                    <Button
+                      onClick={() => onAddPositionClick(pIdx)}
+                      className="mt-2"
+                      size="sm"
+                      variant="secondary"
+                      type="button"
+                    >
+                      + Position
+                    </Button>
+                  </ItemActions>
+                </Item>
               </TableHead>
             ))}
             <TableHead className="text-center min-w-[130px]">Sum per type</TableHead>
@@ -499,41 +512,48 @@ function ProjectTable({
         </TableHeader>
         <TableBody>
           {months.map((month, mIdx) => (
-            <TableRow key={month.toString()}>
-              <TableCell className="text-center font-semibold">{month.toShortString()}</TableCell>
-              {projects.map((project, pIdx) => (
-                <TableCell key={pIdx} className="align-top">
-                  <div className="flex flex-col gap-y-1">
-                    {project.positions.map((pos, posIdx) =>
-                      month.isWithin(pos.start, pos.end) && (
-                        <Button
-                          key={posIdx}
-                          variant={selectedProjectIdx === pIdx && selectedPositionIdx === posIdx ? "outline" : "ghost"}
-                          size="sm"
-                          className="w-full justify-start"
-                          onClick={e => { e.stopPropagation(); onPositionClick(pIdx, posIdx); }}
-                          type="button"
-                        >
-                          <span className="mr-2">{pos.type}</span>
-                          <span className="text-xs text-muted-foreground">{pos.quantity}</span>
-                        </Button>
-                      )
-                    )}
-                  </div>
-                </TableCell>
-              ))}
-              <TableCell className="align-top">
-                {allTypes.map((type, tIdx) => {
-                  const sum = sumPerTypePerMonth[`${tIdx}_${mIdx}`] || 0;
-                  return (
-                    <div key={type} className="flex justify-between">
-                      <span className="text-muted-foreground text-xs">{type}</span>
-                      <span className={sum ? "font-semibold" : "opacity-40"}>{sum}</span>
-                    </div>
-                  );
-                })}
-              </TableCell>
-            </TableRow>
+            <Tooltip key={month.toString()}>
+              <TooltipTrigger asChild>
+                <TableRow key={month.toString()}>
+                  <TableCell className="text-center font-semibold">{month.toShortString()}</TableCell>
+                  {projects.map((project, pIdx) => (
+                    <TableCell key={pIdx} className="align-top">
+                      <div className="flex flex-col gap-y-1">
+                        {project.positions.map((pos, posIdx) =>
+                          month.isWithin(pos.start, pos.end) && (
+                            <Button
+                              key={posIdx}
+                              variant={selectedProjectIdx === pIdx && selectedPositionIdx === posIdx ? "outline" : "ghost"}
+                              size="sm"
+                              className="w-full justify-start"
+                              onClick={e => { e.stopPropagation(); onPositionClick(pIdx, posIdx); }}
+                              type="button"
+                            >
+                              <span className="mr-2">{pos.type}</span>
+                              <span className="text-xs text-muted-foreground">{pos.quantity}</span>
+                            </Button>
+                          )
+                        )}
+                      </div>
+                    </TableCell>
+                  ))}
+                  <TableCell className="align-top">
+                    {allTypes.map((type, tIdx) => {
+                      const sum = sumPerTypePerMonth[`${tIdx}_${mIdx}`] || 0;
+                      return (
+                        <div key={type} className="flex justify-between">
+                          <span className="text-muted-foreground text-xs">{type}</span>
+                          <span className={sum ? "font-semibold" : "opacity-40"}>{sum}</span>
+                        </div>
+                      );
+                    })}
+                  </TableCell>
+                </TableRow>
+              </TooltipTrigger>
+              <TooltipContent side="right" align="center">
+                {month.toDate().toLocaleString("default", { month: "long", year: "numeric" })}
+              </TooltipContent>
+            </Tooltip>
           ))}
         </TableBody>
       </Table>
@@ -742,7 +762,7 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({ initial
   const selectedPositionIdx = sheet && sheet.type === "position" ? sheet.positionIdx : null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full">
       <div className="flex items-center gap-2">
         <h2 className="text-2xl font-semibold">Projects Timeline</h2>
         <AddProjectDialog
@@ -774,7 +794,7 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({ initial
         newPosition={newPosition}
         setNewPosition={setNewPosition}
         onAdd={handleAddPositionSubmit}
-        allTypes={allTypes} // --- MODIFIED: pass allTypes
+        allTypes={allTypes}
       />
       <EditSheet
         open={editSheetOpen}
@@ -783,7 +803,7 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({ initial
         setSheet={setSheet}
         onSave={saveSheetEdit}
         onDelete={deleteSheetEdit}
-        allTypes={allTypes} // --- MODIFIED: pass allTypes
+        allTypes={allTypes}
       />
     </div>
   );
