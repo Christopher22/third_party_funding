@@ -23,58 +23,46 @@ import {
 export class MonthYear {
   year: number;
   month: number; // 1-based (January = 1)
-
   constructor(year: number, month: number) {
     if (month < 1 || month > 12) throw new Error(`Invalid month: ${month}`);
     this.year = year;
     this.month = month;
   }
-
   static fromString(str: string): MonthYear {
     const match = /^(\d{4})-(\d{2})$/.exec(str);
     if (!match) throw new Error("Invalid MonthYear string");
     return new MonthYear(Number(match[1]), Number(match[2]));
   }
-
   static fromDate(date: Date): MonthYear {
     return new MonthYear(date.getFullYear(), date.getMonth() + 1);
   }
-
   static today(): MonthYear {
     return MonthYear.fromDate(new Date());
   }
-
   toString(): string {
-    return `${this.year} - ${this.month.toString().padStart(2, "0")}`;
+    return `this.year−{this.year} - this.year−{this.month.toString().padStart(2, "0")}`;
   }
-
   equals(other: MonthYear): boolean {
     return this.year === other.year && this.month === other.month;
   }
-
   isBefore(other: MonthYear): boolean {
     return this.year < other.year || (this.year === other.year && this.month < other.month);
   }
-
   isAfter(other: MonthYear): boolean {
     return this.year > other.year || (this.year === other.year && this.month > other.month);
   }
-
   isWithin(start: MonthYear, end: MonthYear): boolean {
     return !this.isBefore(start) && !this.isAfter(end);
   }
-
   addMonths(count: number): MonthYear {
     const totalMonths = this.year * 12 + this.month - 1 + count;
     const year = Math.floor(totalMonths / 12);
     const month = (totalMonths % 12) + 1;
     return new MonthYear(year, month);
   }
-
   toDate(): Date {
     return new Date(this.year, this.month - 1, 1);
   }
-
   toShortString(): string {
     // e.g. "Jan 24"
     return this.toDate().toLocaleString("default", { month: "short", year: "2-digit" });
@@ -120,7 +108,7 @@ function MonthPicker({ label, value, onChange, id = "month" }: MonthPickerProps)
           <Button
             variant="outline"
             id={id}
-            className="w-36 justify-between font-normal"
+            className="w-full justify-between font-normal"
             type="button"
           >
             {value.toShortString()}
@@ -132,8 +120,6 @@ function MonthPicker({ label, value, onChange, id = "month" }: MonthPickerProps)
             mode="single"
             selected={value.toDate()}
             captionLayout="dropdown"
-            fromYear={1980}
-            toYear={new Date().getFullYear() + 10}
             onSelect={date => {
               if (date) {
                 onChange(MonthYear.fromDate(date));
@@ -165,8 +151,8 @@ function AddProjectDialog(props: {
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add New Project</DialogTitle>
-          <DialogDescription>Set project name and schedule (month/year only).</DialogDescription>
+          <DialogTitle>Add new project</DialogTitle>
+          <DialogDescription>Set project name and schedule.</DialogDescription>
         </DialogHeader>
         <form className="space-y-4" onSubmit={onAdd} autoComplete="off">
           <Input autoFocus required placeholder="Project Name"
@@ -210,8 +196,9 @@ function AddPositionDialog(props: {
   newPosition: Position;
   setNewPosition: (v: Position) => void;
   onAdd: (e: FormEvent) => void;
+  allTypes: string[]; // --- MODIFIED: Accept allTypes as props ---
 }) {
-  const { open, onOpenChange, newPosition, setNewPosition, onAdd } = props;
+  const { open, onOpenChange, newPosition, setNewPosition, onAdd, allTypes } = props;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -224,10 +211,18 @@ function AddPositionDialog(props: {
             value={newPosition.description}
             onChange={e => setNewPosition({ ...newPosition, description: e.target.value })}
           />
-          <Input required placeholder="Type"
+          {/* --- MODIFIED: Use datalist for type field --- */}
+          <Input
+            required
+            placeholder="Type"
+            list="position-type-list"
             value={newPosition.type}
             onChange={e => setNewPosition({ ...newPosition, type: e.target.value })}
           />
+          <datalist id="position-type-list">
+            {allTypes.map(type => <option key={type} value={type} />)}
+          </datalist>
+          {/* --- END MODIFIED --- */}
           <Input
             type="number"
             min={0}
@@ -285,8 +280,9 @@ function EditSheet(props: {
   setSheet: (sheet: EditSheetState) => void;
   onSave: () => void;
   onDelete: () => void;
+  allTypes: string[]; // --- MODIFIED: Accept allTypes as props ---
 }) {
-  const { open, onOpenChange, sheet, setSheet, onSave, onDelete } = props;
+  const { open, onOpenChange, sheet, setSheet, onSave, onDelete, allTypes } = props;
   if (!sheet) return null;
   const idPrefix = sheet.type === "project" ? "project-edit-" : "pos-edit-";
   return (
@@ -361,12 +357,21 @@ function EditSheet(props: {
                       <div className="grid gap-4">
                         <Field>
                           <FieldLabel htmlFor={idPrefix + "type"}>Type</FieldLabel>
-                          <Input id={idPrefix + "type"} type="text" required
+                          {/* --- MODIFIED: Use datalist for type field --- */}
+                          <Input
+                            id={idPrefix + "type"}
+                            type="text"
+                            required
+                            list="position-type-list"
                             value={sheet.values.type}
-                            onChange={e => setSheet(
-                              { ...sheet, values: { ...sheet.values, type: e.target.value } }
-                            )}
+                            onChange={e =>
+                              setSheet({ ...sheet, values: { ...sheet.values, type: e.target.value } })
+                            }
                           />
+                          <datalist id="position-type-list">
+                            {allTypes.map(type => <option key={type} value={type} />)}
+                          </datalist>
+                          {/* --- END MODIFIED --- */}
                         </Field>
                         <Field>
                           <FieldLabel htmlFor={idPrefix + "quantity"}>Quantity</FieldLabel>
@@ -760,6 +765,7 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({ initial
         newPosition={newPosition}
         setNewPosition={setNewPosition}
         onAdd={handleAddPositionSubmit}
+        allTypes={allTypes} // --- MODIFIED: pass allTypes
       />
       <EditSheet
         open={editSheetOpen}
@@ -768,6 +774,7 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({ initial
         setSheet={setSheet}
         onSave={saveSheetEdit}
         onDelete={deleteSheetEdit}
+        allTypes={allTypes} // --- MODIFIED: pass allTypes
       />
     </div>
   );
