@@ -1,48 +1,47 @@
-import { ProjectGantt } from './project_gantt'
-import type { Project } from './types'
+import { ProjectGantt, type Project, MonthYear } from './project_gantt'
 import './App.css'
 
 function App() {
   const exampleProjects: Project[] = [
   {
     name: "AI Research",
-    start: new Date("2024-01-01"),
-    end: new Date("2024-06-30"),
+    start: new MonthYear(2025, 1),
+    end: new MonthYear(2025, 6),
     positions: [
       {
         description: "Postdoc, full time",
         quantity: 1,
         type: "Postdoc",
-        start: new Date("2024-01-01"),
-        end: new Date("2024-06-30"),
+        start: new MonthYear(2025, 1),
+        end: new MonthYear(2026, 6),
       },
       {
         description: "PhD, part time",
         quantity: 0.5,
         type: "PhD",
-        start: new Date("2024-03-01"),
-        end: new Date("2024-06-30"),
+        start: new MonthYear(2025, 1),
+        end: new MonthYear(2026, 3),
       },
     ],
   },
   {
     name: "Software Project",
-    start: new Date("2024-05-01"),
-    end: new Date("2024-12-31"),
+    start: new MonthYear(2024, 5),
+    end: new MonthYear(2026, 12),
     positions: [
       {
         description: "Developer",
         quantity: 2,
         type: "Dev",
-        start: new Date("2024-05-01"),
-        end: new Date("2024-09-30"),
+        start: new MonthYear(2024, 5),
+        end: new MonthYear(2024, 9),
       },
       {
         description: "Manager, part time",
         quantity: 0.2,
         type: "Manager",
-        start: new Date("2024-05-01"),
-        end: new Date("2024-11-30"),
+        start: new MonthYear(2024, 5),
+        end: new MonthYear(2024, 11),
       },
     ],
   },

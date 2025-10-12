@@ -1,10 +1,13 @@
 import React, { useMemo, useState, type FormEvent } from "react";
-import type { Project } from "./types";
+import { ChevronDownIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Field, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -15,44 +18,138 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-// --- Utility Types & Functions ---
+// --- MONTH+YEAR CLASS ---
 
-export interface PositionInput {
+export class MonthYear {
+  year: number;
+  month: number; // 1-based (January = 1)
+
+  constructor(year: number, month: number) {
+    if (month < 1 || month > 12) throw new Error(`Invalid month: ${month}`);
+    this.year = year;
+    this.month = month;
+  }
+
+  static fromString(str: string): MonthYear {
+    if (!/^\d{4}-\d{2}$/.test(str)) throw new Error("Invalid MonthYear string");
+    const [year, month] = str.split('-').map(Number);
+    return new MonthYear(year, month);
+  }
+
+  static fromDate(date: Date): MonthYear {
+    return new MonthYear(date.getFullYear(), date.getMonth() + 1);
+  }
+
+  static today(): MonthYear {
+    return MonthYear.fromDate(new Date());
+  }
+
+  toString(): string {
+    return `this.year−{this.year}-this.year−{this.month.toString().padStart(2, "0")}`;
+  }
+
+  equals(other: MonthYear): boolean {
+    return this.year === other.year && this.month === other.month;
+  }
+
+  isBefore(other: MonthYear): boolean {
+    return this.year < other.year || (this.year === other.year && this.month < other.month);
+  }
+
+  isAfter(other: MonthYear): boolean {
+    return this.year > other.year || (this.year === other.year && this.month > other.month);
+  }
+
+  isWithin(start: MonthYear, end: MonthYear): boolean {
+    return !this.isBefore(start) && !this.isAfter(end);
+  }
+
+  addMonths(count: number): MonthYear {
+    const y = this.year + Math.floor((this.month - 1 + count) / 12);
+    const m = ((this.month - 1 + count) % 12 + 12) % 12 + 1; // ensure 1-12 range
+    return new MonthYear(y, m);
+  }
+
+  toDate(): Date {
+    return new Date(this.year, this.month - 1, 1);
+  }
+
+  toShortString(): string {
+    // e.g. "Jan 24"
+    return this.toDate().toLocaleString("default", { month: "short", year: "2-digit" });
+  }
+}
+
+// --- TYPES ---
+
+export interface Position {
   description: string;
   quantity: number;
   type: string;
-  start: string; // date string ("YYYY-MM-DD")
-  end: string;
+  start: MonthYear;
+  end: MonthYear;
 }
+
 export interface ProjectInput {
   name: string;
-  start: string;
-  end: string;
+  start: MonthYear;
+  end: MonthYear;
 }
 
-function monthDiff(start: Date, end: Date) {
-  return (end.getFullYear() - start.getFullYear()) * 12 + end.getMonth() - start.getMonth();
-}
-function minDate(...dates: Date[]): Date { return new Date(Math.min(...dates.map(d => d.getTime()))); }
-function maxDate(...dates: Date[]): Date { return new Date(Math.max(...dates.map(d => d.getTime()))); }
-function addMonths(dt: Date, n: number) { return new Date(dt.getFullYear(), dt.getMonth() + n, 1); }
-function formatMonth(dt: Date) {
-  return dt.toLocaleString("default", { month: "short", year: "2-digit" });
-}
-function formatDateInput(dt?: Date | string | null) {
-  if (!dt) return "";
-  if (typeof dt === "string") return dt;
-  if (dt instanceof Date && !isNaN(dt.getTime())) return dt.toISOString().split("T")[0];
-  return "";
+export interface Project extends ProjectInput {
+  positions: Position[];
 }
 
-// --- Editable (Sheet) State ---
-type EditSheetState =
-  | { type: "project", projectIdx: number, values: ProjectInput }
-  | { type: "position", projectIdx: number, positionIdx: number, values: PositionInput }
-  | null;
+// --- MONTH PICKER COMPONENT ---
 
-// --- Add Dialogs ---
+type MonthPickerProps = {
+  label?: string;
+  value: MonthYear;
+  onChange: (v: MonthYear) => void;
+  id?: string;
+};
+
+function MonthPicker({ label, value, onChange, id = "month" }: MonthPickerProps) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="flex flex-col gap-1">
+      {label && <Label htmlFor={id} className="px-1">{label}</Label>}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            id={id}
+            className="w-36 justify-between font-normal"
+            type="button"
+          >
+            {value ? value.toShortString() : "Select month"}
+            <ChevronDownIcon />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={value ? value.toDate() : undefined}
+            captionLayout="dropdown"
+            fromYear={1980}
+            toYear={new Date().getFullYear() + 10}
+            // When user selects a day, return MonthYear for that month
+            onSelect={date => {
+              if (date) {
+                onChange(MonthYear.fromDate(date));
+                setOpen(false);
+              }
+            }}
+            showOutsideDays={false}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+// --- ADD DIALOGS ---
+
 function AddProjectDialog(props: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -69,7 +166,7 @@ function AddProjectDialog(props: {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add New Project</DialogTitle>
-          <DialogDescription>Set project name and schedule.</DialogDescription>
+          <DialogDescription>Set project name and schedule (month/year only).</DialogDescription>
         </DialogHeader>
         <form className="space-y-4" onSubmit={onAdd} autoComplete="off">
           <Input autoFocus required placeholder="Project Name"
@@ -77,21 +174,25 @@ function AddProjectDialog(props: {
             onChange={e => setNewProject({ ...newProject, name: e.target.value })}
           />
           <div className="flex gap-2">
-            <label className="flex flex-col text-sm font-medium">
-              Start
-              <Input type="date" required
-                value={newProject.start}
-                onChange={e => setNewProject({ ...newProject, start: e.target.value })}
-              />
-            </label>
-            <label className="flex flex-col text-sm font-medium">
-              End
-              <Input type="date" required
-                min={newProject.start}
-                value={newProject.end}
-                onChange={e => setNewProject({ ...newProject, end: e.target.value })}
-              />
-            </label>
+            <MonthPicker
+              label="Start"
+              value={newProject.start}
+              onChange={start => setNewProject({
+                ...newProject,
+                start,
+                end: newProject.end.isBefore(start) ? start : newProject.end
+              })}
+              id="proj-add-start"
+            />
+            <MonthPicker
+              label="End"
+              value={newProject.end}
+              onChange={end => setNewProject({
+                ...newProject,
+                end: end.isBefore(newProject.start) ? newProject.start : end
+              })}
+              id="proj-add-end"
+            />
           </div>
           <DialogFooter>
             <Button type="submit">Add</Button>
@@ -106,8 +207,8 @@ function AddProjectDialog(props: {
 function AddPositionDialog(props: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  newPosition: PositionInput;
-  setNewPosition: (v: PositionInput) => void;
+  newPosition: Position;
+  setNewPosition: (v: Position) => void;
   onAdd: (e: FormEvent) => void;
 }) {
   const { open, onOpenChange, newPosition, setNewPosition, onAdd } = props;
@@ -130,25 +231,38 @@ function AddPositionDialog(props: {
             value={newPosition.type}
             onChange={e => setNewPosition({ ...newPosition, type: e.target.value })}
           />
-          <Input type="number" min={0} step={0.01} required placeholder="Quantity"
-            value={newPosition.quantity}
-            onChange={e => setNewPosition({ ...newPosition, quantity: Number(e.target.value) })}
+          <Input
+            type="number"
+            min={0}
+            step={0.01}
+            required
+            placeholder="Quantity"
+            value={isNaN(newPosition.quantity) ? "" : newPosition.quantity}
+            onChange={e => setNewPosition({
+              ...newPosition,
+              quantity: Math.max(0, Number(e.target.value)),
+            })}
           />
           <div className="flex gap-2">
-            <label className="flex flex-col text-xs font-medium">
-              From
-              <Input type="date" required
-                value={newPosition.start}
-                onChange={e => setNewPosition({ ...newPosition, start: e.target.value })}
-              />
-            </label>
-            <label className="flex flex-col text-xs font-medium">
-              To
-              <Input type="date" required min={newPosition.start}
-                value={newPosition.end}
-                onChange={e => setNewPosition({ ...newPosition, end: e.target.value })}
-              />
-            </label>
+            <MonthPicker
+              label="From"
+              value={newPosition.start}
+              onChange={start => setNewPosition({
+                ...newPosition,
+                start,
+                end: newPosition.end.isBefore(start) ? start : newPosition.end
+              })}
+              id="pos-add-start"
+            />
+            <MonthPicker
+              label="To"
+              value={newPosition.end}
+              onChange={end => setNewPosition({
+                ...newPosition,
+                end: end.isBefore(newPosition.start) ? newPosition.start : end
+              })}
+              id="pos-add-end"
+            />
           </div>
           <DialogFooter>
             <Button type="submit">Add</Button>
@@ -160,7 +274,13 @@ function AddPositionDialog(props: {
   );
 }
 
-// --- Edit Sheet ---
+// --- EDIT SHEET STATE & SHEET ---
+
+type EditSheetState =
+  | { type: "project", projectIdx: number, values: ProjectInput }
+  | { type: "position", projectIdx: number, positionIdx: number, values: Position }
+  | null;
+
 function EditSheet(props: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -170,7 +290,6 @@ function EditSheet(props: {
   onDelete: () => void;
 }) {
   const { open, onOpenChange, sheet, setSheet, onSave, onDelete } = props;
-
   if (!sheet) return null;
   const idPrefix = sheet.type === "project" ? "project-edit-" : "pos-edit-";
   return (
@@ -202,20 +321,31 @@ function EditSheet(props: {
                       <div className="grid gap-4">
                         <Field>
                           <FieldLabel htmlFor={idPrefix + "start"}>Start</FieldLabel>
-                          <Input id={idPrefix + "start"} type="date" required
+                          <MonthPicker
                             value={sheet.values.start}
-                            onChange={e => setSheet(
-                              { ...sheet, values: { ...sheet.values, start: e.target.value } }
-                            )}
+                            id={idPrefix + "start"}
+                            onChange={start => setSheet({
+                              ...sheet,
+                              values: {
+                                ...sheet.values,
+                                start,
+                                end: sheet.values.end.isBefore(start) ? start : sheet.values.end
+                              }
+                            })}
                           />
                         </Field>
                         <Field>
                           <FieldLabel htmlFor={idPrefix + "end"}>End</FieldLabel>
-                          <Input id={idPrefix + "end"} type="date" required min={sheet.values.start}
+                          <MonthPicker
                             value={sheet.values.end}
-                            onChange={e => setSheet(
-                              { ...sheet, values: { ...sheet.values, end: e.target.value } }
-                            )}
+                            id={idPrefix + "end"}
+                            onChange={end => setSheet({
+                              ...sheet,
+                              values: {
+                                ...sheet.values,
+                                end: end.isBefore(sheet.values.start) ? sheet.values.start : end
+                              }
+                            })}
                           />
                         </Field>
                       </div>
@@ -243,10 +373,15 @@ function EditSheet(props: {
                         </Field>
                         <Field>
                           <FieldLabel htmlFor={idPrefix + "quantity"}>Quantity</FieldLabel>
-                          <Input id={idPrefix + "quantity"} type="number" min={0} step={0.01} required
-                            value={sheet.values.quantity}
+                          <Input
+                            id={idPrefix + "quantity"}
+                            type="number"
+                            min={0}
+                            step={0.01}
+                            required
+                            value={isNaN(sheet.values.quantity) ? "" : sheet.values.quantity}
                             onChange={e => setSheet(
-                              { ...sheet, values: { ...sheet.values, quantity: Number(e.target.value) } }
+                              { ...sheet, values: { ...sheet.values, quantity: Math.max(0, Number(e.target.value)) } }
                             )}
                           />
                         </Field>
@@ -254,20 +389,31 @@ function EditSheet(props: {
                       <div className="grid gap-4">
                         <Field>
                           <FieldLabel htmlFor={idPrefix + "start"}>Start</FieldLabel>
-                          <Input id={idPrefix + "start"} type="date" required
+                          <MonthPicker
                             value={sheet.values.start}
-                            onChange={e => setSheet(
-                              { ...sheet, values: { ...sheet.values, start: e.target.value } }
-                            )}
+                            id={idPrefix + "start"}
+                            onChange={start => setSheet({
+                              ...sheet,
+                              values: {
+                                ...sheet.values,
+                                start,
+                                end: sheet.values.end.isBefore(start) ? start : sheet.values.end
+                              }
+                            })}
                           />
                         </Field>
                         <Field>
                           <FieldLabel htmlFor={idPrefix + "end"}>End</FieldLabel>
-                          <Input id={idPrefix + "end"} type="date" required min={sheet.values.start}
+                          <MonthPicker
                             value={sheet.values.end}
-                            onChange={e => setSheet(
-                              { ...sheet, values: { ...sheet.values, end: e.target.value } }
-                            )}
+                            id={idPrefix + "end"}
+                            onChange={end => setSheet({
+                              ...sheet,
+                              values: {
+                                ...sheet.values,
+                                end: end.isBefore(sheet.values.start) ? sheet.values.start : end
+                              }
+                            })}
                           />
                         </Field>
                       </div>
@@ -289,9 +435,11 @@ function EditSheet(props: {
   );
 }
 
+// --- PROJECT TABLE ---
+
 interface ProjectTableProps {
   projects: Project[];
-  months: Date[];
+  months: MonthYear[];
   allTypes: string[];
   sumPerTypePerMonth: Record<string, number>;
   onProjectClick: (pidx: number) => void;
@@ -301,7 +449,7 @@ interface ProjectTableProps {
   selectedPositionIdx: number | null;
 }
 
-export function ProjectTable({
+function ProjectTable({
   projects,
   months,
   allTypes,
@@ -329,7 +477,7 @@ export function ProjectTable({
                   {project.name}
                 </Button>
                 <div className="flex gap-1 justify-center text-xs text-muted-foreground">
-                  {formatDateInput(project.start)}-{formatDateInput(project.end)}
+                  {project.start.toShortString()}-{project.end.toShortString()}
                 </div>
                 <Button
                   onClick={() => onAddPositionClick(pIdx)}
@@ -347,13 +495,13 @@ export function ProjectTable({
         </TableHeader>
         <TableBody>
           {months.map((month, mIdx) => (
-            <TableRow key={mIdx}>
-              <TableCell className="text-center font-semibold">{formatMonth(month)}</TableCell>
+            <TableRow key={month.toString()}>
+              <TableCell className="text-center font-semibold">{month.toShortString()}</TableCell>
               {projects.map((project, pIdx) => (
                 <TableCell key={pIdx} className="align-top">
                   <div className="flex flex-col gap-y-1">
                     {project.positions.map((pos, posIdx) =>
-                      pos.end >= month && pos.start < addMonths(month, 1) && (
+                      month.isWithin(pos.start, pos.end) && (
                         <Button
                           key={posIdx}
                           variant={selectedProjectIdx === pIdx && selectedPositionIdx === posIdx ? "outline" : "ghost"}
@@ -388,66 +536,72 @@ export function ProjectTable({
   );
 }
 
-// --- Main Component ---
+// --- MAIN COMPONENT ---
+
 export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({ initialProjects }) => {
-  // Utility to fix date fields on load
-  function fixDates(proj: Project): Project {
-    return {
-      ...proj,
-      start: new Date(proj.start),
-      end: new Date(proj.end),
-      positions: proj.positions.map((pos) => ({
-        ...pos,
-        start: new Date(pos.start),
-        end: new Date(pos.end),
-      })),
-    };
-  }
+  // Normalize initial projects to use MonthYear
+  const fixDates = (proj: Project): Project => ({
+    ...proj,
+    start: proj.start instanceof MonthYear ? proj.start : MonthYear.fromString(String(proj.start)),
+    end: proj.end instanceof MonthYear ? proj.end : MonthYear.fromString(String(proj.end)),
+    positions: proj.positions.map(pos => ({
+      ...pos,
+      start: pos.start instanceof MonthYear ? pos.start : MonthYear.fromString(String(pos.start)),
+      end: pos.end instanceof MonthYear ? pos.end : MonthYear.fromString(String(pos.end)),
+    })),
+  });
+
   const [projects, setProjects] = useState<Project[]>(initialProjects.map(fixDates));
+
   // Sheet state
   const [sheet, setSheet] = useState<EditSheetState>(null);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
 
   // Add dialog state
+  const defaultMonth = MonthYear.today();
+  const defaultEnd = defaultMonth.addMonths(5);
   const defaultNewProject: ProjectInput = {
     name: "",
-    start: formatDateInput(new Date()),
-    end: formatDateInput(addMonths(new Date(), 5)),
+    start: defaultMonth,
+    end: defaultEnd,
   };
   const [addProjectOpen, setAddProjectOpen] = useState(false);
   const [newProject, setNewProject] = useState<ProjectInput>(defaultNewProject);
 
-  const makeDefaultNewPosition = (start: Date, end: Date): PositionInput => ({
+  const makeDefaultNewPosition = (start: MonthYear, end: MonthYear): Position => ({
     description: "",
     quantity: 1,
     type: "",
-    start: formatDateInput(start),
-    end: formatDateInput(end),
+    start, end,
   });
   const [addPositionOpen, setAddPositionOpen] = useState(false);
   const [addPosProjectIdx, setAddPosProjectIdx] = useState<number | null>(null);
-  const [newPosition, setNewPosition] = useState<PositionInput>(makeDefaultNewPosition(new Date(), new Date()));
+  const [newPosition, setNewPosition] = useState<Position>(makeDefaultNewPosition(defaultMonth, defaultEnd));
 
-  // Derived
+  // Derived: months for table
   const months = useMemo(() => {
     if (projects.length === 0) return [];
-    const starts = projects.map((p) => p.start);
-    const ends = projects.map((p) => p.end);
-    const minD = minDate(...starts);
-    const maxD = maxDate(...ends);
-    const monthCount = monthDiff(minD, maxD) + 1;
-    return Array.from({ length: monthCount }, (_, i) => addMonths(minD, i));
+    let minYM = projects[0].start;
+    let maxYM = projects[0].end;
+    for (const p of projects) {
+      if (p.start.isBefore(minYM)) minYM = p.start;
+      if (p.end.isAfter(maxYM)) maxYM = p.end;
+    }
+    const arr: MonthYear[] = [];
+    for (let ym = minYM; !ym.isAfter(maxYM); ym = ym.addMonths(1)) arr.push(ym);
+    return arr;
   }, [projects]);
+
   const allTypes = useMemo(() =>
     Array.from(new Set(projects.flatMap((p) => p.positions.map((pos) => pos.type)))), [projects]);
+
+  // Sum for each [type, month]
   const sumPerTypePerMonth = useMemo(() => {
     const result: Record<string, number> = {};
     months.forEach((month, mIdx) => {
-      const monthStart = month;
-      const monthEnd = addMonths(monthStart, 1);
       projects.forEach(project => {
         project.positions.forEach(pos => {
-          if (pos.end >= monthStart && pos.start < monthEnd) {
+          if (month.isWithin(pos.start, pos.end)) {
             const key = `${allTypes.indexOf(pos.type)}_${mIdx}`;
             result[key] = (result[key] || 0) + pos.quantity;
           }
@@ -463,11 +617,7 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({ initial
     setSheet({
       type: "project",
       projectIdx,
-      values: {
-        name: p.name,
-        start: formatDateInput(p.start),
-        end: formatDateInput(p.end),
-      }
+      values: { name: p.name, start: p.start, end: p.end },
     });
     setEditSheetOpen(true);
   }
@@ -477,13 +627,7 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({ initial
       type: "position",
       projectIdx,
       positionIdx,
-      values: {
-        description: pos.description,
-        quantity: pos.quantity,
-        type: pos.type,
-        start: formatDateInput(pos.start),
-        end: formatDateInput(pos.end),
-      },
+      values: { ...pos },
     });
     setEditSheetOpen(true);
   }
@@ -492,7 +636,6 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({ initial
     setEditSheetOpen(false);
     setSheet(null);
   }
-
   function saveSheetEdit() {
     if (!sheet) return closeEditSheet();
     if (sheet.type === "project") {
@@ -501,8 +644,8 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({ initial
           ? {
             ...p,
             name: sheet.values.name,
-            start: new Date(sheet.values.start),
-            end: new Date(sheet.values.end),
+            start: sheet.values.start,
+            end: sheet.values.end,
           }
           : p));
     } else {
@@ -512,14 +655,7 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({ initial
             ...p,
             positions: p.positions.map((pos, posIdx) =>
               posIdx === sheet.positionIdx
-                ? {
-                  ...pos,
-                  description: sheet.values.description,
-                  type: sheet.values.type,
-                  quantity: sheet.values.quantity,
-                  start: new Date(sheet.values.start),
-                  end: new Date(sheet.values.end),
-                }
+                ? { ...sheet.values }
                 : pos
             ),
           }
@@ -527,7 +663,6 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({ initial
     }
     closeEditSheet();
   }
-
   function deleteSheetEdit() {
     if (!sheet) return closeEditSheet();
     if (sheet.type === "project") {
@@ -553,12 +688,11 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({ initial
     if (!name.trim()) return;
     setProjects([
       ...projects,
-      { name: name.trim(), start: new Date(start), end: new Date(end), positions: [] }
+      { name: name.trim(), start, end, positions: [] }
     ]);
     setAddProjectOpen(false);
     setNewProject(defaultNewProject);
   }
-
   function handleAddPositionSubmit(e: FormEvent) {
     e.preventDefault();
     if (addPosProjectIdx == null) return;
@@ -570,13 +704,7 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({ initial
           ...p,
           positions: [
             ...p.positions,
-            {
-              description,
-              quantity,
-              type,
-              start: new Date(start),
-              end: new Date(end),
-            }
+            { description, quantity, type, start, end }
           ]
         }
         : p
@@ -590,7 +718,7 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({ initial
     setNewPosition(makeDefaultNewPosition(projects[pidx].start, projects[pidx].end));
   }
 
-  // --- Selection for highlighting table ---
+  // --- Table selection highlighting ---
   const selectedProjectIdx = sheet && (sheet.type === "project" || sheet.type === "position") ? sheet.projectIdx : null;
   const selectedPositionIdx = sheet && sheet.type === "position" ? sheet.positionIdx : null;
 
