@@ -31,9 +31,9 @@ export class MonthYear {
   }
 
   static fromString(str: string): MonthYear {
-    if (!/^\d{4}-\d{2}$/.test(str)) throw new Error("Invalid MonthYear string");
-    const [year, month] = str.split('-').map(Number);
-    return new MonthYear(year, month);
+    const match = /^(\d{4})-(\d{2})$/.exec(str);
+    if (!match) throw new Error("Invalid MonthYear string");
+    return new MonthYear(Number(match[1]), Number(match[2]));
   }
 
   static fromDate(date: Date): MonthYear {
@@ -45,7 +45,7 @@ export class MonthYear {
   }
 
   toString(): string {
-    return `this.year−{this.year}-this.year−{this.month.toString().padStart(2, "0")}`;
+    return `${this.year} - ${this.month.toString().padStart(2, "0")}`;
   }
 
   equals(other: MonthYear): boolean {
@@ -65,9 +65,10 @@ export class MonthYear {
   }
 
   addMonths(count: number): MonthYear {
-    const y = this.year + Math.floor((this.month - 1 + count) / 12);
-    const m = ((this.month - 1 + count) % 12 + 12) % 12 + 1; // ensure 1-12 range
-    return new MonthYear(y, m);
+    const totalMonths = this.year * 12 + this.month - 1 + count;
+    const year = Math.floor(totalMonths / 12);
+    const month = (totalMonths % 12) + 1;
+    return new MonthYear(year, month);
   }
 
   toDate(): Date {
@@ -122,18 +123,17 @@ function MonthPicker({ label, value, onChange, id = "month" }: MonthPickerProps)
             className="w-36 justify-between font-normal"
             type="button"
           >
-            {value ? value.toShortString() : "Select month"}
+            {value.toShortString()}
             <ChevronDownIcon />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
           <Calendar
             mode="single"
-            selected={value ? value.toDate() : undefined}
+            selected={value.toDate()}
             captionLayout="dropdown"
             fromYear={1980}
             toYear={new Date().getFullYear() + 10}
-            // When user selects a day, return MonthYear for that month
             onSelect={date => {
               if (date) {
                 onChange(MonthYear.fromDate(date));
@@ -214,9 +214,6 @@ function AddPositionDialog(props: {
   const { open, onOpenChange, newPosition, setNewPosition, onAdd } = props;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        <div />
-      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add Position</DialogTitle>
@@ -237,10 +234,10 @@ function AddPositionDialog(props: {
             step={0.01}
             required
             placeholder="Quantity"
-            value={isNaN(newPosition.quantity) ? "" : newPosition.quantity}
+            value={newPosition.quantity}
             onChange={e => setNewPosition({
               ...newPosition,
-              quantity: Math.max(0, Number(e.target.value)),
+              quantity: Number(e.target.value) || 0,
             })}
           />
           <div className="flex gap-2">
@@ -379,9 +376,9 @@ function EditSheet(props: {
                             min={0}
                             step={0.01}
                             required
-                            value={isNaN(sheet.values.quantity) ? "" : sheet.values.quantity}
+                            value={sheet.values.quantity}
                             onChange={e => setSheet(
-                              { ...sheet, values: { ...sheet.values, quantity: Math.max(0, Number(e.target.value)) } }
+                              { ...sheet, values: { ...sheet.values, quantity: Number(e.target.value) || 0 } }
                             )}
                           />
                         </Field>
@@ -473,6 +470,7 @@ function ProjectTable({
                   variant={selectedProjectIdx === pIdx && selectedPositionIdx == null ? "outline" : "ghost"}
                   size="sm"
                   onClick={() => onProjectClick(pIdx)}
+                  type="button"
                 >
                   {project.name}
                 </Button>
@@ -508,6 +506,7 @@ function ProjectTable({
                           size="sm"
                           className="w-full justify-start"
                           onClick={e => { e.stopPropagation(); onPositionClick(pIdx, posIdx); }}
+                          type="button"
                         >
                           <span className="mr-2">{pos.type}</span>
                           <span className="text-xs text-muted-foreground">{pos.quantity}</span>
@@ -592,8 +591,16 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({ initial
     return arr;
   }, [projects]);
 
-  const allTypes = useMemo(() =>
-    Array.from(new Set(projects.flatMap((p) => p.positions.map((pos) => pos.type)))), [projects]);
+  const allTypes = useMemo(
+    () => Array.from(new Set(projects.flatMap((p) => p.positions.map((pos) => pos.type)))),
+    [projects]
+  );
+
+  const typeIndex = useMemo(() => {
+    return new Map<string, number>(
+      allTypes.map((type, i) => [type, i])
+    );
+  }, [allTypes]);
 
   // Sum for each [type, month]
   const sumPerTypePerMonth = useMemo(() => {
@@ -602,14 +609,16 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({ initial
       projects.forEach(project => {
         project.positions.forEach(pos => {
           if (month.isWithin(pos.start, pos.end)) {
-            const key = `${allTypes.indexOf(pos.type)}_${mIdx}`;
+            const tIdx = typeIndex.get(pos.type);
+            if (tIdx === undefined) return;
+            const key = `${tIdx}_${mIdx}`;
             result[key] = (result[key] || 0) + pos.quantity;
           }
         });
       });
     });
     return result;
-  }, [projects, months, allTypes]);
+  }, [projects, months, typeIndex]);
 
   // --- Sheet: Open, Save, Delete ---
   function openProjectSheet(projectIdx: number) {
@@ -754,7 +763,7 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({ initial
       />
       <EditSheet
         open={editSheetOpen}
-        onOpenChange={open => !open && closeEditSheet()}
+        onOpenChange={open => { if (!open) closeEditSheet(); }}
         sheet={sheet}
         setSheet={setSheet}
         onSave={saveSheetEdit}
