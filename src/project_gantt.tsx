@@ -918,7 +918,7 @@ function ProjectTable({
                               (sum ? "font-semibold" : "opacity-40")
                             }
                           >
-                            {sum}
+                            {sum.toFixed(2)}
                           </span>
                         </div>
                       );
