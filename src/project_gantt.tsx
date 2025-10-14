@@ -259,7 +259,10 @@ function MonthPicker({
                 setOpen(false);
               }
             }}
+            startMonth={new Date(new Date().getFullYear() - 6, 0, 1)}
+            endMonth={new Date(new Date().getFullYear() + 6, 11, 31)}
             showOutsideDays={false}
+            required
           />
         </PopoverContent>
       </Popover>
@@ -493,11 +496,11 @@ function AddPositionDialog({
 type EditSheetState =
   | { type: "project"; projectIdx: number; values: ProjectInput }
   | {
-      type: "position";
-      projectIdx: number;
-      positionIdx: number;
-      values: Position;
-    }
+    type: "position";
+    projectIdx: number;
+    positionIdx: number;
+    values: Position;
+  }
   | null;
 
 function EditSheet({
@@ -813,7 +816,7 @@ function ProjectTable({
                       <Button
                         variant={
                           selectedProjectIdx === pIdx &&
-                          selectedPositionIdx == null
+                            selectedPositionIdx == null
                             ? "outline"
                             : "ghost"
                         }
@@ -869,7 +872,7 @@ function ProjectTable({
                                 key={posIdx}
                                 variant={
                                   selectedProjectIdx === pIdx &&
-                                  selectedPositionIdx === posIdx
+                                    selectedPositionIdx === posIdx
                                     ? "outline"
                                     : "ghost"
                                 }
@@ -1124,11 +1127,11 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({
         projs.map((p, idx) =>
           idx === sheet.projectIdx
             ? {
-                ...p,
-                name: sheet.values.name,
-                start: sheet.values.start,
-                end: sheet.values.end,
-              }
+              ...p,
+              name: sheet.values.name,
+              start: sheet.values.start,
+              end: sheet.values.end,
+            }
             : p
         )
       );
@@ -1137,13 +1140,13 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({
         projs.map((p, idx) =>
           idx === sheet.projectIdx
             ? {
-                ...p,
-                positions: p.positions.map((pos, posIdx) =>
-                  posIdx === sheet.positionIdx
-                    ? { ...sheet.values }
-                    : pos
-                ),
-              }
+              ...p,
+              positions: p.positions.map((pos, posIdx) =>
+                posIdx === sheet.positionIdx
+                  ? { ...sheet.values }
+                  : pos
+              ),
+            }
             : p
         )
       );
@@ -1165,11 +1168,11 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({
           projs.map((p, idx) =>
             idx === sheet.projectIdx
               ? {
-                  ...p,
-                  positions: p.positions.filter(
-                    (_, posIdx) => posIdx !== sheet.positionIdx
-                  ),
-                }
+                ...p,
+                positions: p.positions.filter(
+                  (_, posIdx) => posIdx !== sheet.positionIdx
+                ),
+              }
               : p
           )
         );
@@ -1198,12 +1201,12 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({
       projects.map((p, idx) =>
         idx === addPosProjectIdx
           ? {
-              ...p,
-              positions: [
-                ...p.positions,
-                { description, quantity, type, start, end },
-              ],
-            }
+            ...p,
+            positions: [
+              ...p.positions,
+              { description, quantity, type, start, end },
+            ],
+          }
           : p
       )
     );
@@ -1228,7 +1231,7 @@ export const ProjectGantt: React.FC<{ initialProjects: Project[] }> = ({
 
   const selectedProjectIdx =
     sheet &&
-    (sheet.type === "project" || sheet.type === "position")
+      (sheet.type === "project" || sheet.type === "position")
       ? sheet.projectIdx
       : null;
   const selectedPositionIdx =
