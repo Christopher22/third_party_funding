@@ -21,5 +21,6 @@ export default defineConfig({
     host: '0.0.0.0'
   },
   // Required for GitHub Pages if deploying to a project site
-  base: process.env.BASE_PATH ?? '/',
+  // base: process.env.BASE_PATH ?? '/',
+  base: './',
 })
