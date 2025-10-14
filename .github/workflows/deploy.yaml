@@ -22,10 +22,13 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: "pnpm"
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v4
       - name: Install dependencies
         run: pnpm install
       - name: Build project
-        run: pnpm build
+        run: pnpm build -- --base "${{ steps.pages.outputs.base_path }}"
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
