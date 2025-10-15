@@ -828,19 +828,19 @@ function ProjectTable({
 }: ProjectTableProps) {
   return (
     <div className="overflow-x-auto flex justify-center w-full">
-      <Table>
+      <Table className="min-w-fit w-max">
         <TableCaption>
           <CalendarDays className="inline mb-1 mr-2" size={17} />
           Project positions by month, type and project.
         </TableCaption>
         <TableHeader>
           <TableRow>
-            <TableHead className="text-center">
+            <TableHead className="text-center min-w-[100px] w-[100px] max-w-[100px]">
               <Clock className="mb-0.5 mr-1 inline" size={15} />
               Month
             </TableHead>
             {projects.map((project, pIdx) => (
-              <TableHead key={pIdx}>
+              <TableHead key={pIdx} className="min-w-[200px] w-[200px] max-w-[200px]">
                 <Item>
                   <ItemContent>
                     <ItemTitle>
@@ -886,7 +886,7 @@ function ProjectTable({
                 </Item>
               </TableHead>
             ))}
-            <TableHead className="text-center min-w-[130px]">
+            <TableHead className="text-center min-w-[150px] w-[150px] max-w-[150px]">
               <Tag className="mb-0.5 mr-1 inline" size={15} />
               Sum per type
             </TableHead>
@@ -897,12 +897,11 @@ function ProjectTable({
             <Tooltip key={month.toString()}>
               <TooltipTrigger asChild>
                 <TableRow key={month.toString()}>
-                  <TableCell className="text-center font-semibold">
-                    <Clock size={14} className="inline mb-1 mr-1" />
+                  <TableCell className="text-center font-semibold min-w-[100px] w-[100px] max-w-[100px]">
                     {month.toShortString()}
                   </TableCell>
                   {projects.map((project, pIdx) => (
-                    <TableCell key={pIdx} className="align-top">
+                    <TableCell key={pIdx} className="align-top min-w-[200px] w-[200px] max-w-[200px]">
                       <div className="flex flex-col gap-y-1">
                         {project.positions.map(
                           (pos, posIdx) =>
@@ -935,7 +934,7 @@ function ProjectTable({
                       </div>
                     </TableCell>
                   ))}
-                  <TableCell className="align-top">
+                  <TableCell className="align-top min-w-[150px] w-[150px] max-w-[150px]">
                     {allTypes.map((type, tIdx) => {
                       const sum =
                         sumPerTypePerMonth[`${tIdx}_${mIdx}`] || 0;
