@@ -796,8 +796,8 @@ function ProjectTable({
   selectedPositionIdx,
 }: ProjectTableProps) {
   return (
-    <div className="overflow-x-auto w-full">
-      <Table className="w-full">
+    <div className="overflow-x-auto flex justify-center w-full">
+      <Table>
         <TableCaption>
           <CalendarDays className="inline mb-1 mr-2" size={17} />
           Project positions by month, type and project.
