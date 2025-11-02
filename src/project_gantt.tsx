@@ -1,4 +1,4 @@
-import {
+import React, {
   useMemo,
   useState,
   useRef,
@@ -24,127 +24,96 @@ import { EditSheet, type EditSheetState } from "@/edit-sheet";
 import {
   projectsFromSerializable,
   projectsToSerializable,
-  downloadStringAsFile,
+  downloadStringAsFile
 } from "@/lib/serialization";
 
 
-export function ProjectGantt({ initialProjects }: { initialProjects: Project[] }) {
-  function loadData(data: unknown): MonthYear {
-    if (data instanceof MonthYear) {
-      return data;
-    } else if (typeof data === "string") {
-      return MonthYear.fromString(data);
-    } else if (data && typeof data === "object" && "year" in data && "month" in data) {
-      return new MonthYear(
-        (data as { year: number; month: number }).year,
-        (data as { year: number; month: number }).month
-      );
-    } else {
-      throw new Error("Invalid MonthYear data");
-    }
-  }
-
-  // Set up the projects state, and ensure funded is present (default false if not)
-  const fixDates = (proj: Project): Project => ({
-    ...proj,
-    start: loadData(proj.start),
-    end: loadData(proj.end),
-    positions: proj.positions.map((pos) => ({
-      ...pos,
-      start: loadData(pos.start),
-      end: loadData(pos.end),
-      quantity:
-        typeof pos.quantity === "number"
-          ? pos.quantity
-          : Number(pos.quantity) || 0,
-    })),
-    funded: proj.funded ?? false,
-  });
-
-  const [projects, setProjects] = useState<Project[]>(
-    initialProjects.map(fixDates)
-  );
-  const [showOnlyFunded, setShowOnlyFunded] = useState(false);
-
-  const [sheet, setSheet] = useState<EditSheetState>(null);
-  const [editSheetOpen, setEditSheetOpen] = useState(false);
-
-  const defaultMonth = MonthYear.today();
-  const defaultEnd = defaultMonth.addMonths(5);
-  const defaultNewProject: ProjectInput = {
-    name: "",
-    start: defaultMonth,
-    end: defaultEnd,
-    funded: false,
-  };
-  const [addProjectOpen, setAddProjectOpen] = useState(false);
-  const [newProject, setNewProject] = useState<ProjectInput>(
-    defaultNewProject
-  );
-
-  const makeDefaultNewPosition = (
-    start: MonthYear,
-    end: MonthYear
-  ): Position => ({
+function createDefaultPosition(start: MonthYear, end: MonthYear): Position {
+  return {
     description: "",
     quantity: 1,
     type: "",
     start,
     end,
-  });
-  const [addPositionOpen, setAddPositionOpen] = useState(false);
+  };
+}
+
+export function ProjectGantt({ initialProjects }: { initialProjects: Project[] }) {
+  // State
+  const [projects, setProjects] = useState<Project[]>(initialProjects);
+  const [showOnlyFunded, setShowOnlyFunded] = useState(false);
+
+  // Edit Sheet State
+  const [editSheet, setEditSheet] = useState<EditSheetState>(null);
+  const [isEditSheetOpen, setEditSheetOpen] = useState(false);
+
+  // Add Project State
+  const defaultMonth = MonthYear.today();
+  const defaultEndMonth = defaultMonth.addMonths(5);
+  const defaultProjectInput: ProjectInput = {
+    name: "",
+    start: defaultMonth,
+    end: defaultEndMonth,
+    funded: false,
+  };
+  const [isAddProjectOpen, setAddProjectOpen] = useState(false);
+  const [newProject, setNewProject] = useState<ProjectInput>(defaultProjectInput);
+
+  // Add Position State
+  const [isAddPositionOpen, setAddPositionOpen] = useState(false);
   const [addPosProjectIdx, setAddPosProjectIdx] = useState<number | null>(null);
   const [newPosition, setNewPosition] = useState<Position>(
-    makeDefaultNewPosition(defaultMonth, defaultEnd)
+    createDefaultPosition(defaultMonth, defaultEndMonth)
   );
+
+  // Timeline filter
   const [onlyFuture, setOnlyFuture] = useState(true);
 
+  // File upload ref
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ---------- Memoized Derivations ----------
   const today = MonthYear.today();
-  const months = useMemo(() => {
-    if (projects.length === 0) return [];
-    let minYM = projects[0].start;
-    let maxYM = projects[0].end;
-    for (const p of projects) {
-      if (p.start.isBefore(minYM)) minYM = p.start;
-      if (p.end.isAfter(maxYM)) maxYM = p.end;
-    }
-    if (onlyFuture && today.isAfter(minYM)) {
-      minYM = today;
-    }
-    const arr: MonthYear[] = [];
-    for (
-      let ym = minYM;
-      !ym.isAfter(maxYM);
-      ym = ym.addMonths(1)
-    )
-      arr.push(ym);
-    return arr;
-  }, [projects, onlyFuture, today]);
+
+  const filteredProjects = useMemo(
+    () => (showOnlyFunded ? projects.filter((p) => p.funded) : projects),
+    [projects, showOnlyFunded]
+  );
 
   const allTypes = useMemo(
     () =>
       Array.from(
-        new Set(
-          projects.flatMap((p) => p.positions.map((pos) => pos.type))
-        )
+        new Set(projects.flatMap((p) => p.positions.map((pos) => pos.type)))
       ),
     [projects]
   );
+  const typeIndex = useMemo(
+    () => new Map<string, number>(allTypes.map((type, i) => [type, i])),
+    [allTypes]
+  );
 
-  const typeIndex = useMemo(() => {
-    return new Map<string, number>(
-      allTypes.map((type, i) => [type, i])
-    );
-  }, [allTypes]);
+  // Months column generator
+  const timelineMonths = useMemo(() => {
+    if (projects.length === 0) return [];
+    let minMonth = projects[0].start;
+    let maxMonth = projects[0].end;
+    for (const p of projects) {
+      if (p.start.isBefore(minMonth)) minMonth = p.start;
+      if (p.end.isAfter(maxMonth)) maxMonth = p.end;
+    }
+    if (onlyFuture && today.isAfter(minMonth)) minMonth = today;
+    const months: MonthYear[] = [];
+    for (let ym = minMonth; !ym.isAfter(maxMonth); ym = ym.addMonths(1)) {
+      months.push(ym);
+    }
+    return months;
+  }, [projects, onlyFuture, today]);
 
-  const projectsFiltered = showOnlyFunded
-    ? projects.filter((p) => p.funded)
-    : projects;
-
+  // Project/Position quantity matrix (per type per month)
   const sumPerTypePerMonth = useMemo(() => {
     const result: Record<string, number> = {};
-    months.forEach((month, mIdx) => {
-      projectsFiltered.forEach((project) => {
+    timelineMonths.forEach((month, mIdx) => {
+      filteredProjects.forEach((project) => {
         project.positions.forEach((pos) => {
           if (month.isWithin(pos.start, pos.end)) {
             const tIdx = typeIndex.get(pos.type);
@@ -156,20 +125,18 @@ export function ProjectGantt({ initialProjects }: { initialProjects: Project[] }
       });
     });
     return result;
-  }, [projectsFiltered, months, typeIndex]);
+  }, [filteredProjects, timelineMonths, typeIndex]);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // ---------- Callbacks & Handlers ----------
 
-  function handleSaveProjects() {
-    const serializable = projectsToSerializable(projects);
-    const jsonStr = JSON.stringify(serializable, null, 2);
-    downloadStringAsFile(
-      jsonStr,
-      `projects-${new Date().toISOString().slice(0, 10)}.json`
-    );
-  }
+  // ----------- Save & Load -----------
 
-  function handleLoadProjects(event: ChangeEvent<HTMLInputElement>) {
+  const handleSaveProjects = () => {
+    const data = JSON.stringify(projectsToSerializable(projects), null, 2);
+    downloadStringAsFile(data, `projects-${new Date().toISOString().slice(0, 10)}.json`);
+  };
+
+  const handleLoadProjects = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -177,97 +144,93 @@ export function ProjectGantt({ initialProjects }: { initialProjects: Project[] }
       try {
         const raw = JSON.parse(e.target?.result as string);
         setProjects(projectsFromSerializable(raw));
-        setSheet(null);
+        setEditSheet(null);
         setEditSheetOpen(false);
       } catch (err) {
         alert("Failed to load projects: " + (err as Error).message);
       }
     };
     reader.readAsText(file);
+    // Reset so the same file can be uploaded multiple times
     event.target.value = "";
-  }
+  };
 
-  function openProjectSheet(projectIdx: number) {
+  // ----------- Sheet Edit -----------
+  const openProjectEditSheet = (projectIdx: number) => {
     const p = projects[projectIdx];
-    setSheet({
+    setEditSheet({
       type: "project",
       projectIdx,
-      values: {
-        name: p.name,
-        start: p.start,
-        end: p.end,
-        funded: p.funded,
-      },
+      values: { name: p.name, start: p.start, end: p.end, funded: p.funded },
     });
     setEditSheetOpen(true);
-  }
-  function openPositionSheet(projectIdx: number, positionIdx: number) {
+  };
+  const openPositionEditSheet = (projectIdx: number, positionIdx: number) => {
     const pos = projects[projectIdx].positions[positionIdx];
-    setSheet({
+    setEditSheet({
       type: "position",
       projectIdx,
       positionIdx,
       values: { ...pos },
     });
     setEditSheetOpen(true);
-  }
-
-  function closeEditSheet() {
+  };
+  const closeEditSheet = () => {
     setEditSheetOpen(false);
-    setSheet(null);
-  }
-  function saveSheetEdit() {
-    if (!sheet) return closeEditSheet();
-    if (sheet.type === "project") {
-      setProjects((projs) =>
-        projs.map((p, idx) =>
-          idx === sheet.projectIdx
+    setEditSheet(null);
+  };
+
+  const saveSheetEdit = () => {
+    if (!editSheet) return closeEditSheet();
+    setProjects((prev) => {
+      if (editSheet.type === "project") {
+        return prev.map((p, idx) =>
+          idx === editSheet.projectIdx
             ? {
               ...p,
-              name: sheet.values.name,
-              start: sheet.values.start,
-              end: sheet.values.end,
-              funded: !!sheet.values.funded,
+              ...editSheet.values,
+              funded: !!editSheet.values.funded,
             }
             : p
-        )
-      );
-    } else {
-      setProjects((projs) =>
-        projs.map((p, idx) =>
-          idx === sheet.projectIdx
+        );
+      } else {
+        return prev.map((p, idx) =>
+          idx === editSheet.projectIdx
             ? {
               ...p,
               positions: p.positions.map((pos, posIdx) =>
-                posIdx === sheet.positionIdx
-                  ? { ...sheet.values }
-                  : pos
+                posIdx === editSheet.positionIdx ? { ...editSheet.values } : pos
               ),
             }
             : p
-        )
-      );
-    }
+        );
+      }
+    });
     closeEditSheet();
-  }
-  function deleteSheetEdit() {
-    if (!sheet) return closeEditSheet();
-    if (sheet.type === "project") {
-      if (window.confirm("Delete project?")) {
-        setProjects((projs) =>
-          projs.filter((_, idx) => idx !== sheet.projectIdx)
+  };
+
+  const deleteSheetEdit = () => {
+    if (!editSheet) return closeEditSheet();
+    if (editSheet.type === "project") {
+      if (
+        window.confirm(
+          `Delete project "${projects[editSheet.projectIdx]?.name}" and all its positions?`
+        )
+      ) {
+        setProjects((prev) =>
+          prev.filter((_, idx) => idx !== editSheet.projectIdx)
         );
         closeEditSheet();
       }
     } else {
-      if (window.confirm("Delete position?")) {
-        setProjects((projs) =>
-          projs.map((p, idx) =>
-            idx === sheet.projectIdx
+      if (window.confirm("Delete this position?")) {
+        setProjects((prev) =>
+          prev.map((p, idx) =>
+            idx === editSheet.projectIdx
               ? {
                 ...p,
                 positions: p.positions.filter(
-                  (_, posIdx) => posIdx !== sheet.positionIdx
+                  (_, posIdx) => posIdx !== editSheet.positionIdx
                 ),
               }
               : p
@@ -276,63 +239,60 @@ export function ProjectGantt({ initialProjects }: { initialProjects: Project[] }
         closeEditSheet();
       }
     }
-  }
+  };
 
-  function handleAddProject(ev: FormEvent) {
+  // ----------- Add Project & Position Handlers -----------
+
+  const handleAddProject: React.FormEventHandler = (ev) => {
     ev.preventDefault();
     const { name, start, end, funded } = newProject;
     if (!name.trim()) return;
-    setProjects([
-      ...projects,
+    setProjects((prev) => [
+      ...prev,
       { name: name.trim(), start, end, funded: !!funded, positions: [] },
     ]);
     setAddProjectOpen(false);
-    setNewProject(defaultNewProject);
-  }
-  function handleAddPositionSubmit(e: FormEvent) {
+    setNewProject(defaultProjectInput);
+  };
+
+  const handleAddPositionSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (addPosProjectIdx == null) return;
     const { description, type, quantity, start, end } = newPosition;
     if (!description.trim() || !type.trim() || quantity < 0) return;
-    setProjects(
-      projects.map((p, idx) =>
+    setProjects((prev) =>
+      prev.map((p, idx) =>
         idx === addPosProjectIdx
           ? {
             ...p,
-            positions: [
-              ...p.positions,
-              { description, quantity, type, start, end },
-            ],
+            positions: [...p.positions, { description, type, quantity, start, end }],
           }
           : p
       )
     );
     setAddPositionOpen(false);
-    setNewPosition(
-      makeDefaultNewPosition(
-        projects[addPosProjectIdx].start,
-        projects[addPosProjectIdx].end
-      )
-    );
-  }
-  function handleAddPositionClick(pidx: number) {
-    setAddPosProjectIdx(pidx);
+    setNewPosition(createDefaultPosition(
+      projects[addPosProjectIdx].start,
+      projects[addPosProjectIdx].end
+    ));
+  };
+
+  const handleAddPositionClick = (projectIdx: number) => {
+    setAddPosProjectIdx(projectIdx);
     setAddPositionOpen(true);
     setNewPosition(
-      makeDefaultNewPosition(
-        projects[pidx].start,
-        projects[pidx].end
+      createDefaultPosition(
+        projects[projectIdx].start,
+        projects[projectIdx].end
       )
     );
-  }
+  };
 
-  const selectedProjectIdx =
-    sheet &&
-      (sheet.type === "project" || sheet.type === "position")
-      ? sheet.projectIdx
-      : null;
-  const selectedPositionIdx =
-    sheet && sheet.type === "position" ? sheet.positionIdx : null;
+  // ----------- Selection Information -----------
+  const selectedProjectIdx = editSheet && ('projectIdx' in editSheet) ? editSheet.projectIdx : null;
+  const selectedPositionIdx = editSheet && editSheet.type === "position" ? editSheet.positionIdx : null;
+
+  // ---------- Render ----------
 
   return (
     <div className="space-y-6 w-full">
@@ -341,17 +301,20 @@ export function ProjectGantt({ initialProjects }: { initialProjects: Project[] }
           <CalendarDays className="mb-0.5 mr-2" size={23} />
           Projects Timeline
         </h2>
+
         <AddProjectDialog
-          open={addProjectOpen}
+          open={isAddProjectOpen}
           onOpenChange={setAddProjectOpen}
           newProject={newProject}
           setNewProject={setNewProject}
           onAdd={handleAddProject}
         />
+
         <Button size="sm" variant="secondary" onClick={handleSaveProjects}>
           <Save size={16} className="mr-1" />
           Save projects
         </Button>
+
         <input
           ref={fileInputRef}
           type="file"
@@ -370,6 +333,7 @@ export function ProjectGantt({ initialProjects }: { initialProjects: Project[] }
             Load projects
           </span>
         </Button>
+
         <div className="flex items-center gap-2 ml-4">
           <Switch
             checked={onlyFuture}
@@ -399,36 +363,39 @@ export function ProjectGantt({ initialProjects }: { initialProjects: Project[] }
           </label>
         </div>
       </div>
+
       <ProjectTable
-        projects={projectsFiltered}
-        months={months}
+        projects={filteredProjects}
+        months={timelineMonths}
         allTypes={allTypes}
         sumPerTypePerMonth={sumPerTypePerMonth}
-        onProjectClick={openProjectSheet}
-        onPositionClick={openPositionSheet}
+        onProjectClick={openProjectEditSheet}
+        onPositionClick={openPositionEditSheet}
         onAddPositionClick={handleAddPositionClick}
         selectedProjectIdx={selectedProjectIdx}
         selectedPositionIdx={selectedPositionIdx}
       />
+
       <AddPositionDialog
-        open={addPositionOpen}
+        open={isAddPositionOpen}
         onOpenChange={setAddPositionOpen}
         newPosition={newPosition}
         setNewPosition={setNewPosition}
         onAdd={handleAddPositionSubmit}
         allTypes={allTypes}
       />
+
       <EditSheet
-        open={editSheetOpen}
+        open={isEditSheetOpen}
         onOpenChange={(open) => {
           if (!open) closeEditSheet();
         }}
-        sheet={sheet}
-        setSheet={setSheet}
+        sheet={editSheet}
+        setSheet={setEditSheet}
         onSave={saveSheetEdit}
         onDelete={deleteSheetEdit}
         allTypes={allTypes}
       />
     </div>
   );
-};
+}

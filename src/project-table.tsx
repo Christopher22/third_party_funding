@@ -27,6 +27,7 @@ import {
     ItemDescription,
     ItemTitle,
 } from "@/components/ui/item";
+import { Badge } from "@/components/ui/badge"
 
 import { MonthYear } from "@/lib/month-year";
 import type { Project } from "@/lib/types";
@@ -84,19 +85,15 @@ export function ProjectTable({
                                                 type="button"
                                             >
                                                 {project.name}
-                                                {project.funded && (
-                                                    <span
-                                                        className="ml-2 px-2 py-0.5 bg-green-100 text-green-900 rounded-full text-xs"
-                                                        style={{ marginLeft: 6, fontWeight: 600 }}
-                                                    >
-                                                        Funded
-                                                    </span>
-                                                )}
                                             </Button>
                                         </ItemTitle>
-                                        <ItemDescription>
-                                            {project.start.toShortString()} -{" "}
-                                            {project.end.toShortString()}
+                                        <ItemDescription className="flex flex-col">
+                                            {project.funded && (
+                                                <Badge variant="outline">
+                                                    Funded
+                                                </Badge>
+                                            )}
+                                            <span>{`${project.start.toShortString()} - ${project.end.toShortString()}`}</span>
                                         </ItemDescription>
                                     </ItemContent>
                                     <ItemActions>
