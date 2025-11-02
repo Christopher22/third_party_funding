@@ -255,6 +255,7 @@ function MonthPicker({
           <Calendar
             mode="single"
             selected={value.toDate()}
+            month={value.toDate()}
             captionLayout="dropdown"
             onSelect={(date) => {
               if (date) {
